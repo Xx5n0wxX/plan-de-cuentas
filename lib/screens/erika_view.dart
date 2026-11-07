@@ -8,6 +8,7 @@ import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/erika_payment_success_dialog.dart';
+import '../widgets/whatsapp_template_editor.dart';
 
 class ErikaView extends StatelessWidget {
   const ErikaView({super.key});
@@ -571,98 +572,108 @@ class ErikaView extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Editar Préstamo • ${loan.creditor}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: creditorCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Acreedor / Entidad / Persona',
-                  prefixIcon: Icon(Icons.person_outline),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          actionsOverflowButtonSpacing: 8,
+          actionsOverflowDirection: VerticalDirection.down,
+          title: Text('Editar Préstamo • ${loan.creditor}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: creditorCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Acreedor / Entidad / Persona',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: labelCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Etiqueta / N° Identificador',
-                  prefixIcon: Icon(Icons.tag),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: labelCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Etiqueta / N° Identificador',
+                    prefixIcon: Icon(Icons.tag),
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: paidInstallmentsCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Cuotas Pagadas',
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: paidInstallmentsCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Cuotas Pagadas',
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: installmentsCountCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Total Cuotas',
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: installmentsCountCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Total Cuotas',
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: principalCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Capital Recibido',
+                    prefixText: '\$ ',
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: principalCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Capital Recibido',
-                  prefixText: '\$ ',
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: totalCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Total a Pagar (con interés)',
-                  prefixText: '\$ ',
+                const SizedBox(height: 10),
+                TextField(
+                  controller: totalCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Total a Pagar (con interés)',
+                    prefixText: '\$ ',
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: installmentCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Valor Cuota Mensual',
-                  prefixText: '\$ ',
+                const SizedBox(height: 10),
+                TextField(
+                  controller: installmentCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Valor Cuota Mensual',
+                    prefixText: '\$ ',
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: templateCtrl,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  labelText: 'Plantilla WhatsApp',
-                  helperText:
-                      'Variables: {ACREEDOR}, {ETIQUETA}, {CUOTA}, {TOTAL}, {MONTO}',
+                const SizedBox(height: 16),
+                WhatsAppTemplateEditor(
+                  controller: templateCtrl,
+                  creditor: creditorCtrl.text,
+                  label: labelCtrl.text,
+                  loanNumber: loan.loanNumber,
+                  currentCuota: (int.tryParse(paidInstallmentsCtrl.text) ?? loan.paidInstallments) + 1,
+                  totalCuotas: int.tryParse(installmentsCountCtrl.text) ?? loan.totalInstallments,
+                  amount: double.tryParse(installmentCtrl.text) ?? loan.installmentValue,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
             onPressed: () {
               final creditor = creditorCtrl.text.trim().isEmpty
                   ? loan.creditor
@@ -701,8 +712,9 @@ class ErikaView extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showAddLoanDialog(BuildContext context, FinanceProvider provider) {
     final nextNum = provider.erikaLoans.length + 1;
@@ -719,133 +731,143 @@ class ErikaView extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nuevo Préstamo o Deuda en Cuotas'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: creditorCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Acreedor / Entidad / Persona',
-                  hintText: 'Ej: Banco, Tarjeta, Familiar, Prestamista...',
-                  prefixIcon: Icon(Icons.person_outline),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          actionsOverflowButtonSpacing: 8,
+          actionsOverflowDirection: VerticalDirection.down,
+          title: const Text('Nuevo Préstamo o Deuda en Cuotas'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: creditorCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Acreedor / Entidad / Persona',
+                    hintText: 'Ej: Banco, Tarjeta, Familiar, Prestamista...',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: labelCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Etiqueta / N°',
-                        hintText: 'Ej: No 1, Auto',
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: labelCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Etiqueta / N°',
+                          hintText: 'Ej: No 1, Auto',
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: installmentsCountCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Total de Cuotas',
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: installmentsCountCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Total de Cuotas',
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: principalCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Capital Recibido / Monto Original',
+                    prefixText: '\$ ',
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: principalCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Capital Recibido / Monto Original',
-                  prefixText: '\$ ',
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: totalCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Total a Pagar (con interés)',
-                  prefixText: '\$ ',
+                const SizedBox(height: 10),
+                TextField(
+                  controller: totalCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Total a Pagar (con interés)',
+                    prefixText: '\$ ',
+                  ),
+                  onChanged: (val) {
+                    final total = double.tryParse(val);
+                    final count = int.tryParse(installmentsCountCtrl.text) ?? 5;
+                    if (total != null && count > 0) {
+                      installmentCtrl.text = (total / count).round().toString();
+                    }
+                    setDialogState(() {});
+                  },
                 ),
-                onChanged: (val) {
-                  final total = double.tryParse(val);
-                  final count = int.tryParse(installmentsCountCtrl.text) ?? 5;
-                  if (total != null && count > 0) {
-                    installmentCtrl.text = (total / count).round().toString();
-                  }
-                },
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: installmentCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Valor Cuota Mensual',
-                  prefixText: '\$ ',
+                const SizedBox(height: 10),
+                TextField(
+                  controller: installmentCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Valor Cuota Mensual',
+                    prefixText: '\$ ',
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: templateCtrl,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  labelText: 'Plantilla Comprobante WhatsApp',
-                  helperText:
-                      'Variables: {ACREEDOR}, {ETIQUETA}, {CUOTA}, {TOTAL}, {MONTO}',
+                const SizedBox(height: 16),
+                WhatsAppTemplateEditor(
+                  controller: templateCtrl,
+                  creditor: creditorCtrl.text,
+                  label: labelCtrl.text,
+                  loanNumber: int.tryParse(loanNumberCtrl.text) ?? nextNum,
+                  currentCuota: 1,
+                  totalCuotas: int.tryParse(installmentsCountCtrl.text) ?? 5,
+                  amount: double.tryParse(installmentCtrl.text) ?? 0,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final creditor = creditorCtrl.text.trim().isEmpty
-                  ? 'Acreedor'
-                  : creditorCtrl.text.trim();
-              final numLoan = int.tryParse(loanNumberCtrl.text) ?? nextNum;
-              final count = int.tryParse(installmentsCountCtrl.text) ?? 5;
-              final installment = double.tryParse(installmentCtrl.text) ?? 0;
-              final total =
-                  double.tryParse(totalCtrl.text) ?? (installment * count);
-              final principal = double.tryParse(principalCtrl.text) ?? total;
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final creditor = creditorCtrl.text.trim().isEmpty
+                    ? 'Acreedor'
+                    : creditorCtrl.text.trim();
+                final numLoan = int.tryParse(loanNumberCtrl.text) ?? nextNum;
+                final count = int.tryParse(installmentsCountCtrl.text) ?? 5;
+                final installment = double.tryParse(installmentCtrl.text) ?? 0;
+                final total =
+                    double.tryParse(totalCtrl.text) ?? (installment * count);
+                final principal = double.tryParse(principalCtrl.text) ?? total;
 
-              if (installment <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Ingresa un valor de cuota válido')),
+                if (installment <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Ingresa un valor de cuota válido')),
+                  );
+                  return;
+                }
+
+                provider.addErikaLoan(
+                  loanNumber: numLoan,
+                  creditor: creditor,
+                  label: labelCtrl.text.trim(),
+                  receiptTemplate: templateCtrl.text.trim(),
+                  grantDate: DateTime.now(),
+                  principalAmount: principal,
+                  totalToPay: total,
+                  installmentValue: installment,
+                  totalInstallments: count,
                 );
-                return;
-              }
-
-              provider.addErikaLoan(
-                loanNumber: numLoan,
-                creditor: creditor,
-                label: labelCtrl.text.trim(),
-                receiptTemplate: templateCtrl.text.trim(),
-                grantDate: DateTime.now(),
-                principalAmount: principal,
-                totalToPay: total,
-                installmentValue: installment,
-                totalInstallments: count,
-              );
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Crear Préstamo'),
-          ),
-        ],
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Crear Préstamo'),
+            ),
+          ],
+        ),
       ),
     );
   }

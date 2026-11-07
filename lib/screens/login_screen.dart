@@ -693,14 +693,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   _buildGoogleGLogo(),
                   const SizedBox(width: 10),
                   Flexible(
-                    child: Text(
-                      'Continuar con Google',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF1F2937),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Continuar con Google',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF1F2937),
+                        ),
                       ),
                     ),
                   ),

@@ -1,8 +1,8 @@
 {
-  "version": "2.3.0",
-  "buildNumber": 230,
+  "version": "2.3.1",
+  "buildNumber": 231,
   "forceUpdate": true,
-  "changelog": "• Edición completa en todos los módulos: Movimientos, Préstamos y Cuotas, Libretas/Cuentas Abiertas, Cuentas por Cobrar, Metas de Ahorro, Suscripciones, Presupuestos y Gastos Hormiga, Tarjetas de Crédito y Lista de Compras.\n• Optimización de lectura en toda la app sin reducir fuentes: textos multilínea con salto automático, fichas estructuradas y prevención de desbordes.\n• Confirmación de seguridad en eliminaciones para prevenir pérdida accidental de datos.\n• Descargas de actualizaciones de alta velocidad alojadas en GitHub Releases.",
+  "changelog": "• Editor visual interactivo de comprobantes WhatsApp para préstamos: todas las variables visibles ({ACREEDOR}, {ETIQUETA}, {NUMERO}, {CUOTA}, {TOTAL}, {MONTO}), inserción con un toque y vista previa en vivo.\n• Mayor amplitud en todos los diálogos móviles (+48dp de ancho utilizable) para evitar desbordes y cortes de texto.\n• Soporte multilínea completo en títulos de libretas y cuentas abiertas.\n• Ajuste automático en botones de inicio de sesión.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

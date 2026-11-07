@@ -114,6 +114,15 @@ class AppTheme {
         unselectedLabelTextStyle: const TextStyle(color: lightTextSecondary),
       ),
       dividerTheme: const DividerThemeData(color: lightBorder, thickness: 1),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        helperMaxLines: 5,
+        errorMaxLines: 3,
+      ),
     );
   }
 
@@ -177,6 +186,15 @@ class AppTheme {
         unselectedLabelTextStyle: const TextStyle(color: darkTextSecondary),
       ),
       dividerTheme: const DividerThemeData(color: darkBorder, thickness: 1),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        helperMaxLines: 5,
+        errorMaxLines: 3,
+      ),
     );
   }
 }

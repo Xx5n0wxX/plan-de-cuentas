@@ -56,7 +56,6 @@ class _PayFiadoDialogState extends State<PayFiadoDialog> {
           Expanded(
             child: Text(
               'Abonar a ${context.watch<FinanceProvider>().selectedOpenAccount}',
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

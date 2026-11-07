@@ -47,7 +47,6 @@ class _AddFiadoDialogState extends State<AddFiadoDialog> {
           Expanded(
             child: Text(
               'Anotar en ${context.watch<FinanceProvider>().selectedOpenAccount}',
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
