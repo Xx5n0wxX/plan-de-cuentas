@@ -1,0 +1,660 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Application: Plan de Cuentas (10-Module Personal Finance Suite)
+// Architecture: Vault-scoped multi-device live sync under /users/{vaultId}/...
+//               and QR pairing handshake under /pairing_sessions/{sessionCode}
+//
+// 1. QR Pairing Sessions
+// Collection: /pairing_sessions/{sessionCode}
+// Document ID: sessionCode (6-digit or UUID pairing code)
+// Fields:
+//   - code: string (required, 1-128 chars, immutable, matches sessionCode)
+//   - status: string (required, enum ['waiting', 'linked'])
+//   - createdAt: string (required, ISO 8601 string, 1-64 chars)
+//   - desktopDeviceName: string (required, 1-200 chars)
+//   - vaultId: string (optional/nullable, <= 128 chars)
+//   - ownerName: string (optional/nullable, <= 100 chars)
+//   - linkedDeviceId: string (optional/nullable, <= 128 chars)
+//
+// 2. User / Vault Profile
+// Collection: /users/{vaultId}
+// Document ID: vaultId (owner UID or shared vault identifier)
+// Fields:
+//   - uid: string (optional, 1-128 chars, must match vaultId if present)
+//   - email: string (optional, 1-254 chars)
+//   - displayName: string (optional, 1-100 chars)
+//   - photoUrl: string (optional/nullable, 0-2048 chars)
+//   - isGuest: bool (optional)
+//   - createdAt: timestamp / string (optional)
+//   - updatedAt: timestamp / string (optional)
+//
+// 3. Transactions (Module 1: Monthly Flow)
+// Collection: /users/{vaultId}/transactions/{transactionId}
+// Document ID: transactionId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches transactionId)
+//   - title: string (required, 1-200 chars)
+//   - amount: number (required, non-negative, <= 100,000,000,000)
+//   - date: string (required, ISO 8601 string, 10-64 chars)
+//   - type: string (required, enum ['income', 'expense'])
+//   - category: string (required, 1-100 chars)
+//   - note: string (optional/nullable, <= 1000 chars)
+//   - relatedLoanId: string (optional/nullable, <= 128 chars)
+//   - isShared: bool (required)
+//
+// 4. Fiado Entries (Module 3: Open Accounts / Libretas)
+// Collection: /users/{vaultId}/fiado_entries/{entryId}
+// Document ID: entryId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches entryId)
+//   - accountName: string (optional/nullable, <= 100 chars)
+//   - date: string (required, ISO 8601 string, 10-64 chars)
+//   - amount: number (required, non-negative, <= 100,000,000,000)
+//   - note: string (optional/nullable, <= 1000 chars)
+//   - isSettled: bool (required)
+//
+// 5. Fiado Payments (Module 3: Open Accounts / Libretas)
+// Collection: /users/{vaultId}/fiado_payments/{paymentId}
+// Document ID: paymentId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches paymentId)
+//   - accountName: string (optional/nullable, <= 100 chars)
+//   - date: string (required, ISO 8601 string, 10-64 chars)
+//   - amountPaid: number (required, non-negative, <= 100,000,000,000)
+//   - remainingBalance: number (required, non-negative, <= 100,000,000,000)
+//   - note: string (optional/nullable, <= 1000 chars)
+//
+// 6. Erika Loans / Installment Loans (Module 2: Loans & Installment Debts)
+// Collection: /users/{vaultId}/erika_loans/{loanId}
+// Document ID: loanId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches loanId)
+//   - loanNumber: int/number (required, >= 1, <= 100,000)
+//   - creditor: string (optional/nullable, <= 100 chars)
+//   - label: string (optional/nullable, <= 100 chars)
+//   - receiptTemplate: string (optional/nullable, <= 300 chars)
+//   - grantDate: string (required, ISO 8601 string, 10-64 chars)
+//   - principalAmount: number (required, non-negative, <= 100,000,000,000)
+//   - totalToPay: number (required, non-negative, <= 100,000,000,000)
+//   - installmentValue: number (required, non-negative, <= 100,000,000,000)
+//   - totalInstallments: int/number (required, >= 1, <= 1,000)
+//   - paidInstallments: int/number (required, >= 0, <= 1,000)
+//   - nextDueDate: string (optional/nullable, ISO 8601 string, 10-64 chars)
+//
+// 7. Other Debts (Module 2: Loans & Installment Debts)
+// Collection: /users/{vaultId}/other_debts/{debtId}
+// Document ID: debtId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches debtId)
+//   - title: string (required, 1-200 chars)
+//   - installmentAmount: number (required, non-negative, <= 100,000,000,000)
+//   - currentInstallment: int/number (required, >= 0, <= 1,000)
+//   - totalInstallments: int/number (required, >= 1, <= 1,000)
+//   - isPaidThisMonth: bool (required)
+//   - note: string (optional/nullable, <= 1000 chars)
+//
+// 8. Vault Configuration (Module 4 Shared Config & Modular Suite Config)
+// Collection: /users/{vaultId}/config/{configId}
+// Document ID: configId (e.g. 'shared' or 'modules')
+// Fields for 'shared':
+//   - isEnabled: bool (required)
+//   - partnerName: string (required, 1-100 chars)
+//   - myPercentage: number (required, >= 0, <= 100)
+//   - partnerPercentage: number (required, >= 0, <= 100)
+// Fields for 'modules':
+//   - activeModules: list (required, <= 20 items)
+//   - onboardingCompleted: bool (optional/nullable)
+//   - openAccountNames: list (optional/nullable, <= 50 items)
+//
+// 9. Linked Devices
+// Collection: /users/{vaultId}/linked_devices/{deviceId}
+// Document ID: deviceId (string identifier for linked desktop/web/mobile client)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches deviceId)
+//   - deviceName: string (required, 1-200 chars)
+//   - platform: string (required, 1-100 chars)
+//   - linkedAt: string (required, ISO 8601 string, 1-64 chars)
+//   - lastActive: string (required, ISO 8601 string, 1-64 chars)
+//   - isActive: bool (required)
+//
+// 10. Receivables (Module 5: Me Deben / Cuentas por Cobrar)
+// Collection: /users/{vaultId}/receivables/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - debtorName: string (required, 1-150 chars)
+//   - concept: string (required, 0-250 chars)
+//   - totalAmount: number (required, non-negative, <= 100,000,000,000)
+//   - paidAmount: number (required, non-negative, <= 100,000,000,000)
+//   - date: string (required, ISO 8601 string, 10-64 chars)
+//   - dueDate: string (optional/nullable, ISO 8601 string, 10-64 chars)
+//
+// 11. Savings Goals (Module 6: Metas de Ahorro y Sobres)
+// Collection: /users/{vaultId}/savings_goals/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - name: string (required, 1-150 chars)
+//   - targetAmount: number (required, non-negative, <= 100,000,000,000)
+//   - currentAmount: number (required, non-negative, <= 100,000,000,000)
+//   - monthlyContribution: number (required, non-negative, <= 100,000,000,000)
+//   - reserveFromLiquidity: bool (required)
+//
+// 12. Subscriptions (Module 7: Suscripciones y Cobros Automáticos)
+// Collection: /users/{vaultId}/subscriptions/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - name: string (required, 1-150 chars)
+//   - amount: number (required, non-negative, <= 100,000,000,000)
+//   - billingDay: int/number (required, 1..31)
+//   - category: string (required, 1-100 chars)
+//   - isActive: bool (required)
+//   - paidThisMonth: bool (required)
+//
+// 13. Budget Categories (Module 8: Gastos Hormiga y Presupuestos)
+// Collection: /users/{vaultId}/budget_categories/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - name: string (required, 1-100 chars)
+//   - monthlyLimit: number (required, non-negative, <= 100,000,000,000)
+//
+// 14. Ant Expenses (Module 8: Gastos Hormiga y Presupuestos)
+// Collection: /users/{vaultId}/ant_expenses/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - categoryId: string (required, 0-128 chars)
+//   - categoryName: string (required, 1-100 chars)
+//   - title: string (required, 1-200 chars)
+//   - amount: number (required, non-negative, <= 100,000,000,000)
+//   - date: string (required, ISO 8601 string, 10-64 chars)
+//
+// 15. Credit Cards (Module 9: Tarjetas de Crédito y Facturación)
+// Collection: /users/{vaultId}/credit_cards/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - name: string (required, 1-150 chars)
+//   - creditLimit: number (required, non-negative, <= 100,000,000,000)
+//   - usedAmount: number (required, non-negative, <= 100,000,000,000)
+//   - nextBillingAmount: number (required, non-negative, <= 100,000,000,000)
+//   - closingDay: int/number (required, 1..31)
+//   - dueDay: int/number (required, 1..31)
+//
+// 16. Shopping Items (Module 10: Lista de Compras / Supermercado)
+// Collection: /users/{vaultId}/shopping_items/{itemId}
+// Document ID: itemId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches itemId)
+//   - name: string (required, 1-200 chars)
+//   - estimatedPrice: number (required, non-negative, <= 100,000,000,000)
+//   - quantity: int/number (required, 1..10000)
+//   - isChecked: bool (required)
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Default Deny All Access
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if the request is from an authenticated user (Google Sign-In or Anonymous Auth)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Validate non-negative numbers (handles int, float, number)
+    function isValidNonNegativeNumber(val) {
+      return (val is int || val is float || val is number) &&
+             val >= 0 && val <= 100000000000;
+    }
+
+    // Validate percentages (0 to 100)
+    function isValidPercentage(val) {
+      return (val is int || val is float || val is number) &&
+             val >= 0 && val <= 100;
+    }
+
+    // Validate bounded integer / count numbers
+    function isValidInteger(val, minVal, maxVal) {
+      return (val is int || val is number) &&
+             val >= minVal && val <= maxVal;
+    }
+
+    // Validate ISO 8601 date string format and length
+    function isValidIsoDate(str) {
+      return str is string &&
+             str.size() >= 10 && str.size() <= 64 &&
+             str.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}.*');
+    }
+
+    // Validate optional or nullable string
+    function isValidOptionalString(data, field, maxLen) {
+      return !(field in data) ||
+             data[field] == null ||
+             (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    // ===============================================================
+    // Domain Validators (Applied to both create and update operations)
+    // ===============================================================
+
+    // Validator for QR pairing session document
+    function isValidPairingSession(data) {
+      return data.keys().hasOnly(['code', 'status', 'createdAt', 'desktopDeviceName', 'vaultId', 'ownerName', 'linkedDeviceId']) &&
+             data.keys().hasAll(['code', 'status', 'createdAt', 'desktopDeviceName']) &&
+             data.code is string && data.code.size() >= 1 && data.code.size() <= 128 &&
+             (data.status == 'waiting' || data.status == 'linked') &&
+             data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 64 &&
+             data.desktopDeviceName is string && data.desktopDeviceName.size() >= 1 && data.desktopDeviceName.size() <= 200 &&
+             isValidOptionalString(data, 'vaultId', 128) &&
+             isValidOptionalString(data, 'ownerName', 100) &&
+             isValidOptionalString(data, 'linkedDeviceId', 128);
+    }
+
+    // Validator for user / vault profile document
+    function isValidUserProfile(data, vaultId) {
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'photoUrl', 'isGuest', 'createdAt', 'updatedAt']) &&
+             (!('uid' in data) || (data.uid is string && data.uid == vaultId)) &&
+             isValidOptionalString(data, 'email', 254) &&
+             isValidOptionalString(data, 'displayName', 100) &&
+             isValidOptionalString(data, 'photoUrl', 2048) &&
+             (!('isGuest' in data) || data.isGuest is bool);
+    }
+
+    // Validator for transactions
+    function isValidTransaction(data) {
+      return data.keys().hasOnly(['id', 'title', 'amount', 'date', 'type', 'category', 'note', 'relatedLoanId', 'isShared']) &&
+             data.keys().hasAll(['id', 'title', 'amount', 'date', 'type', 'category', 'isShared']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             isValidNonNegativeNumber(data.amount) &&
+             isValidIsoDate(data.date) &&
+             (data.type == 'income' || data.type == 'expense') &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 100 &&
+             isValidOptionalString(data, 'note', 1000) &&
+             isValidOptionalString(data, 'relatedLoanId', 128) &&
+             data.isShared is bool;
+    }
+
+    // Validator for fiado entries
+    function isValidFiadoEntry(data) {
+      return data.keys().hasOnly(['id', 'accountName', 'date', 'amount', 'note', 'isSettled']) &&
+             data.keys().hasAll(['id', 'date', 'amount', 'isSettled']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             isValidOptionalString(data, 'accountName', 100) &&
+             isValidIsoDate(data.date) &&
+             isValidNonNegativeNumber(data.amount) &&
+             isValidOptionalString(data, 'note', 1000) &&
+             data.isSettled is bool;
+    }
+
+    // Validator for fiado payments
+    function isValidFiadoPayment(data) {
+      return data.keys().hasOnly(['id', 'accountName', 'date', 'amountPaid', 'remainingBalance', 'note']) &&
+             data.keys().hasAll(['id', 'date', 'amountPaid', 'remainingBalance']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             isValidOptionalString(data, 'accountName', 100) &&
+             isValidIsoDate(data.date) &&
+             isValidNonNegativeNumber(data.amountPaid) &&
+             isValidNonNegativeNumber(data.remainingBalance) &&
+             isValidOptionalString(data, 'note', 1000);
+    }
+
+    // Validator for Erika loans / installment loans
+    function isValidErikaLoan(data) {
+      return data.keys().hasOnly(['id', 'loanNumber', 'creditor', 'label', 'receiptTemplate', 'grantDate', 'principalAmount', 'totalToPay', 'installmentValue', 'totalInstallments', 'paidInstallments', 'nextDueDate']) &&
+             data.keys().hasAll(['id', 'loanNumber', 'grantDate', 'principalAmount', 'totalToPay', 'installmentValue', 'totalInstallments', 'paidInstallments']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             isValidInteger(data.loanNumber, 1, 100000) &&
+             isValidOptionalString(data, 'creditor', 100) &&
+             isValidOptionalString(data, 'label', 100) &&
+             isValidOptionalString(data, 'receiptTemplate', 300) &&
+             isValidIsoDate(data.grantDate) &&
+             isValidNonNegativeNumber(data.principalAmount) &&
+             isValidNonNegativeNumber(data.totalToPay) &&
+             isValidNonNegativeNumber(data.installmentValue) &&
+             isValidInteger(data.totalInstallments, 1, 1000) &&
+             isValidInteger(data.paidInstallments, 0, 1000) &&
+             (!('nextDueDate' in data) || data.nextDueDate == null || isValidIsoDate(data.nextDueDate));
+    }
+
+    // Validator for other debts
+    function isValidOtherDebt(data) {
+      return data.keys().hasOnly(['id', 'title', 'installmentAmount', 'currentInstallment', 'totalInstallments', 'isPaidThisMonth', 'note']) &&
+             data.keys().hasAll(['id', 'title', 'installmentAmount', 'currentInstallment', 'totalInstallments', 'isPaidThisMonth']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             isValidNonNegativeNumber(data.installmentAmount) &&
+             isValidInteger(data.currentInstallment, 0, 1000) &&
+             isValidInteger(data.totalInstallments, 1, 1000) &&
+             data.isPaidThisMonth is bool &&
+             isValidOptionalString(data, 'note', 1000);
+    }
+
+    // Validator for shared expense configuration (config/shared)
+    function isValidSharedConfig(data) {
+      return data.keys().hasOnly(['isEnabled', 'partnerName', 'myPercentage', 'partnerPercentage']) &&
+             data.keys().hasAll(['isEnabled', 'partnerName', 'myPercentage', 'partnerPercentage']) &&
+             data.isEnabled is bool &&
+             data.partnerName is string && data.partnerName.size() >= 1 && data.partnerName.size() <= 100 &&
+             isValidPercentage(data.myPercentage) &&
+             isValidPercentage(data.partnerPercentage);
+    }
+
+    // Validator for modular suite configuration (config/modules)
+    function isValidModulesConfig(data) {
+      return data.keys().hasOnly(['activeModules', 'onboardingCompleted', 'openAccountNames']) &&
+             data.keys().hasAll(['activeModules']) &&
+             data.activeModules is list && data.activeModules.size() <= 20 &&
+             (!('onboardingCompleted' in data) || data.onboardingCompleted == null || data.onboardingCompleted is bool) &&
+             (!('openAccountNames' in data) || data.openAccountNames == null || (data.openAccountNames is list && data.openAccountNames.size() <= 50));
+    }
+
+    // Validator for linked devices in a vault
+    function isValidLinkedDevice(data) {
+      return data.keys().hasOnly(['id', 'deviceName', 'platform', 'linkedAt', 'lastActive', 'isActive']) &&
+             data.keys().hasAll(['id', 'deviceName', 'platform', 'linkedAt', 'lastActive', 'isActive']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.deviceName is string && data.deviceName.size() >= 1 && data.deviceName.size() <= 200 &&
+             data.platform is string && data.platform.size() >= 1 && data.platform.size() <= 100 &&
+             data.linkedAt is string && data.linkedAt.size() >= 1 && data.linkedAt.size() <= 64 &&
+             data.lastActive is string && data.lastActive.size() >= 1 && data.lastActive.size() <= 64 &&
+             data.isActive is bool;
+    }
+
+    // Validator for receivables (Module 5)
+    function isValidReceivable(data) {
+      return data.keys().hasOnly(['id', 'debtorName', 'concept', 'totalAmount', 'paidAmount', 'date', 'dueDate']) &&
+             data.keys().hasAll(['id', 'debtorName', 'concept', 'totalAmount', 'paidAmount', 'date']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.debtorName is string && data.debtorName.size() >= 1 && data.debtorName.size() <= 150 &&
+             data.concept is string && data.concept.size() <= 250 &&
+             isValidNonNegativeNumber(data.totalAmount) &&
+             isValidNonNegativeNumber(data.paidAmount) &&
+             isValidIsoDate(data.date) &&
+             (!('dueDate' in data) || data.dueDate == null || isValidIsoDate(data.dueDate));
+    }
+
+    // Validator for savings goals (Module 6)
+    function isValidSavingsGoal(data) {
+      return data.keys().hasOnly(['id', 'name', 'targetAmount', 'currentAmount', 'monthlyContribution', 'reserveFromLiquidity']) &&
+             data.keys().hasAll(['id', 'name', 'targetAmount', 'currentAmount', 'monthlyContribution', 'reserveFromLiquidity']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+             isValidNonNegativeNumber(data.targetAmount) &&
+             isValidNonNegativeNumber(data.currentAmount) &&
+             isValidNonNegativeNumber(data.monthlyContribution) &&
+             data.reserveFromLiquidity is bool;
+    }
+
+    // Validator for subscriptions (Module 7)
+    function isValidSubscription(data) {
+      return data.keys().hasOnly(['id', 'name', 'amount', 'billingDay', 'category', 'isActive', 'paidThisMonth']) &&
+             data.keys().hasAll(['id', 'name', 'amount', 'billingDay', 'category', 'isActive', 'paidThisMonth']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+             isValidNonNegativeNumber(data.amount) &&
+             isValidInteger(data.billingDay, 1, 31) &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 100 &&
+             data.isActive is bool &&
+             data.paidThisMonth is bool;
+    }
+
+    // Validator for budget categories (Module 8)
+    function isValidBudgetCategory(data) {
+      return data.keys().hasOnly(['id', 'name', 'monthlyLimit']) &&
+             data.keys().hasAll(['id', 'name', 'monthlyLimit']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             isValidNonNegativeNumber(data.monthlyLimit);
+    }
+
+    // Validator for ant expenses (Module 8)
+    function isValidAntExpense(data) {
+      return data.keys().hasOnly(['id', 'categoryId', 'categoryName', 'title', 'amount', 'date']) &&
+             data.keys().hasAll(['id', 'categoryId', 'categoryName', 'title', 'amount', 'date']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.categoryId is string && data.categoryId.size() <= 128 &&
+             data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 100 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             isValidNonNegativeNumber(data.amount) &&
+             isValidIsoDate(data.date);
+    }
+
+    // Validator for credit cards (Module 9)
+    function isValidCreditCard(data) {
+      return data.keys().hasOnly(['id', 'name', 'creditLimit', 'usedAmount', 'nextBillingAmount', 'closingDay', 'dueDay']) &&
+             data.keys().hasAll(['id', 'name', 'creditLimit', 'usedAmount', 'nextBillingAmount', 'closingDay', 'dueDay']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+             isValidNonNegativeNumber(data.creditLimit) &&
+             isValidNonNegativeNumber(data.usedAmount) &&
+             isValidNonNegativeNumber(data.nextBillingAmount) &&
+             isValidInteger(data.closingDay, 1, 31) &&
+             isValidInteger(data.dueDay, 1, 31);
+    }
+
+    // Validator for shopping items (Module 10)
+    function isValidShoppingItem(data) {
+      return data.keys().hasOnly(['id', 'name', 'estimatedPrice', 'quantity', 'isChecked']) &&
+             data.keys().hasAll(['id', 'name', 'estimatedPrice', 'quantity', 'isChecked']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+             isValidNonNegativeNumber(data.estimatedPrice) &&
+             isValidInteger(data.quantity, 1, 10000) &&
+             data.isChecked is bool;
+    }
+
+    // ===============================================================
+    // QR Pairing Sessions Rules (/pairing_sessions/{sessionCode})
+    // ===============================================================
+
+    match /pairing_sessions/{sessionCode} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                       isValidPairingSession(request.resource.data) &&
+                       request.resource.data.code == sessionCode;
+      allow update: if isAuthenticated() &&
+                       isValidPairingSession(request.resource.data) &&
+                       request.resource.data.code == resource.data.code;
+      allow delete: if isAuthenticated();
+    }
+
+    // ===============================================================
+    // Vault-Scoped Security Rules (/users/{vaultId})
+    // ===============================================================
+
+    match /users/{vaultId} {
+      // User / Vault Profile Document
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUserProfile(request.resource.data, vaultId);
+      allow update: if isAuthenticated() && isValidUserProfile(request.resource.data, vaultId) &&
+                       (!('uid' in resource.data) || request.resource.data.uid == resource.data.uid);
+      allow delete: if isAuthenticated();
+
+      // 1. Transactions Collection
+      match /transactions/{transactionId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidTransaction(request.resource.data) &&
+                         request.resource.data.id == transactionId;
+        allow update: if isAuthenticated() &&
+                         isValidTransaction(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 2. Fiado Entries Collection
+      match /fiado_entries/{entryId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidFiadoEntry(request.resource.data) &&
+                         request.resource.data.id == entryId;
+        allow update: if isAuthenticated() &&
+                         isValidFiadoEntry(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 3. Fiado Payments Collection
+      match /fiado_payments/{paymentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidFiadoPayment(request.resource.data) &&
+                         request.resource.data.id == paymentId;
+        allow update: if isAuthenticated() &&
+                         isValidFiadoPayment(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 4. Erika Loans / Installment Loans Collection
+      match /erika_loans/{loanId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidErikaLoan(request.resource.data) &&
+                         request.resource.data.id == loanId;
+        allow update: if isAuthenticated() &&
+                         isValidErikaLoan(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 5. Other Debts Collection
+      match /other_debts/{debtId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidOtherDebt(request.resource.data) &&
+                         request.resource.data.id == debtId;
+        allow update: if isAuthenticated() &&
+                         isValidOtherDebt(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 6. Config Collection (e.g. doc 'shared' or 'modules')
+      match /config/{configId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         (isValidSharedConfig(request.resource.data) ||
+                          isValidModulesConfig(request.resource.data));
+        allow update: if isAuthenticated() &&
+                         (isValidSharedConfig(request.resource.data) ||
+                          isValidModulesConfig(request.resource.data));
+        allow delete: if isAuthenticated();
+      }
+
+      // 7. Linked Devices Collection
+      match /linked_devices/{deviceId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidLinkedDevice(request.resource.data) &&
+                         request.resource.data.id == deviceId;
+        allow update: if isAuthenticated() &&
+                         isValidLinkedDevice(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 8. Receivables Collection (Module 5)
+      match /receivables/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidReceivable(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidReceivable(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 9. Savings Goals Collection (Module 6)
+      match /savings_goals/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidSavingsGoal(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidSavingsGoal(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 10. Subscriptions Collection (Module 7)
+      match /subscriptions/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidSubscription(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidSubscription(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 11. Budget Categories Collection (Module 8)
+      match /budget_categories/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidBudgetCategory(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidBudgetCategory(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 12. Ant Expenses Collection (Module 8)
+      match /ant_expenses/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidAntExpense(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidAntExpense(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 13. Credit Cards Collection (Module 9)
+      match /credit_cards/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidCreditCard(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidCreditCard(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 14. Shopping Items Collection (Module 10)
+      match /shopping_items/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidShoppingItem(request.resource.data) &&
+                         request.resource.data.id == itemId;
+        allow update: if isAuthenticated() &&
+                         isValidShoppingItem(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+    }
+  }
+}

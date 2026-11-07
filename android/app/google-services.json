@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "978621193811",
+    "project_id": "plan-de-cuentas-45670",
+    "storage_bucket": "plan-de-cuentas-45670.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:978621193811:android:2a5c7fc14f915974f370a6",
+        "android_client_info": {
+          "package_name": "com.diegoplan.plan_de_cuentas"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "978621193811-gc3c2pknutc0j6tfrvh9n9eb5ocao8g6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.diegoplan.plan_de_cuentas",
+            "certificate_hash": "d0aecad4e2b2612869a6d6fc77ca07b789e0362a"
+          }
+        },
+        {
+          "client_id": "978621193811-1tdct92mcgapc59f70tv5isg7hph07i6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt1PSVEkUbhTSn6Hdnnk_kYug1VNBPeDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "978621193811-1tdct92mcgapc59f70tv5isg7hph07i6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

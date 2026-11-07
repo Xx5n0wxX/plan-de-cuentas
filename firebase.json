@@ -1,0 +1,53 @@
+{
+  "auth": {
+    "providers": {
+      "anonymous": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Plan de Cuentas",
+        "supportEmail": "scream.games@gmail.com",
+        "authorizedRedirectUris": [
+          "https://plan-de-cuentas-45670.firebaseapp.com/__/auth/handler",
+          "https://plan-de-cuentas-45670.web.app/__/auth/handler",
+          "http://localhost:8080",
+          "http://127.0.0.1:8080",
+          "http://192.168.1.2:8080"
+        ]
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "plan-de-cuentas-45670",
+          "appId": "1:978621193811:android:2a5c7fc14f915974f370a6",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "plan-de-cuentas-45670",
+          "configurations": {
+            "android": "1:978621193811:android:2a5c7fc14f915974f370a6",
+            "web": "1:978621193811:web:e0004558e0a5fdfff370a6",
+            "windows": "1:978621193811:web:a10ea83c1aaa9e68f370a6"
+          }
+        }
+      }
+    }
+  }
+}
