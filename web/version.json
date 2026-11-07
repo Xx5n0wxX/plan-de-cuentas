@@ -2,7 +2,7 @@
   "version": "2.3.0",
   "buildNumber": 230,
   "forceUpdate": true,
-  "changelog": "• Edición completa en todos los módulos: Movimientos, Préstamos y Cuotas, Libretas/Cuentas Abiertas, Cuentas por Cobrar, Metas de Ahorro, Suscripciones, Presupuestos y Gastos Hormiga, Tarjetas de Crédito y Lista de Compras.\n• Optimización de lectura en toda la app sin reducir fuentes: textos multilínea con salto automático, fichas estructuradas y prevención de desbordes.\n• Confirmación de seguridad en eliminaciones para prevenir pérdida accidental de datos.",
-  "apkUrl": "https://plan-de-cuentas-45670.web.app/downloads/PlanDeCuentas_Android.apk",
-  "windowsExeUrl": "https://plan-de-cuentas-45670.web.app/downloads/PlanDeCuentas_Setup.exe"
+  "changelog": "• Edición completa en todos los módulos: Movimientos, Préstamos y Cuotas, Libretas/Cuentas Abiertas, Cuentas por Cobrar, Metas de Ahorro, Suscripciones, Presupuestos y Gastos Hormiga, Tarjetas de Crédito y Lista de Compras.\n• Optimización de lectura en toda la app sin reducir fuentes: textos multilínea con salto automático, fichas estructuradas y prevención de desbordes.\n• Confirmación de seguridad en eliminaciones para prevenir pérdida accidental de datos.\n• Descargas de actualizaciones de alta velocidad alojadas en GitHub Releases.",
+  "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
+  "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

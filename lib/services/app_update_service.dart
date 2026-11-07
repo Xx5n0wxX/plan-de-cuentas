@@ -28,9 +28,9 @@ class AppVersionInfo {
       forceUpdate: (json['forceUpdate'] as bool?) ?? false,
       changelog: (json['changelog'] as String?) ?? '',
       apkUrl: (json['apkUrl'] as String?) ??
-          'https://plan-de-cuentas-45670.web.app/downloads/PlanDeCuentas_Android.apk',
+          'https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk',
       windowsExeUrl: (json['windowsExeUrl'] as String?) ??
-          'https://plan-de-cuentas-45670.web.app/downloads/PlanDeCuentas_Setup.exe',
+          'https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe',
     );
   }
 }
