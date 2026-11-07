@@ -1,8 +1,8 @@
 {
-  "version": "2.3.2",
-  "buildNumber": 232,
-  "forceUpdate": true,
-  "changelog": "• ¡Actualización interna directa en la app!: Ahora puedes actualizar en 1 toque con barra de progreso en vivo, sin necesidad de salir al navegador ni buscar archivos en descargas.\n• Opción manual alternativa para descargar la APK completa desde el navegador si lo necesitas.\n• Editor interactivo de comprobantes WhatsApp con variables de 1 toque y vista previa en vivo.\n• Mayor amplitud en todos los diálogos (+48dp) y textos multilínea sin cortes.",
+  "version": "2.3.3",
+  "buildNumber": 233,
+  "forceUpdate": false,
+  "changelog": "• ¡Prueba de actualización directa en 1 toque!: Comprobando la descarga interna y apertura automática del instalador de Android.\n• Selector entre actualización interna rápida y descarga manual en navegador.\n• Optimizaciones menores en la interfaz.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

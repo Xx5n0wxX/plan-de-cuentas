@@ -259,13 +259,20 @@ class _SettingsViewState extends State<SettingsView> {
                             color: AppTheme.primaryTeal.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'v${AppUpdateService.currentVersion} (Build ${AppUpdateService.currentBuildNumber})',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: AppTheme.primaryTeal,
-                            ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.bolt, size: 14, color: AppTheme.primaryTeal),
+                              SizedBox(width: 4),
+                              Text(
+                                'v${AppUpdateService.currentVersion} • Actualizaciones 1-Toque',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: AppTheme.primaryTeal,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
