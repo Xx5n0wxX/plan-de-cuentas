@@ -7,6 +7,7 @@ import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
 import '../services/firebase_sync_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_update_dialog.dart';
 import '../widgets/qr_scanner_dialog.dart';
 
 class SettingsView extends StatefulWidget {
@@ -291,7 +292,10 @@ class _SettingsViewState extends State<SettingsView> {
                             return;
                           }
                           if (AppUpdateService.isUpdateAvailable(remote)) {
-                            await AppUpdateService.launchUpdateDownload(remote);
+                            showDialog(
+                              context: context,
+                              builder: (_) => AppUpdateDialog(remote: remote),
+                            );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(

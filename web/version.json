@@ -1,8 +1,8 @@
 {
-  "version": "2.3.1",
-  "buildNumber": 231,
+  "version": "2.3.2",
+  "buildNumber": 232,
   "forceUpdate": true,
-  "changelog": "• Editor visual interactivo de comprobantes WhatsApp para préstamos: todas las variables visibles ({ACREEDOR}, {ETIQUETA}, {NUMERO}, {CUOTA}, {TOTAL}, {MONTO}), inserción con un toque y vista previa en vivo.\n• Mayor amplitud en todos los diálogos móviles (+48dp de ancho utilizable) para evitar desbordes y cortes de texto.\n• Soporte multilínea completo en títulos de libretas y cuentas abiertas.\n• Ajuste automático en botones de inicio de sesión.",
+  "changelog": "• ¡Actualización interna directa en la app!: Ahora puedes actualizar en 1 toque con barra de progreso en vivo, sin necesidad de salir al navegador ni buscar archivos en descargas.\n• Opción manual alternativa para descargar la APK completa desde el navegador si lo necesitas.\n• Editor interactivo de comprobantes WhatsApp con variables de 1 toque y vista previa en vivo.\n• Mayor amplitud en todos los diálogos (+48dp) y textos multilínea sin cortes.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

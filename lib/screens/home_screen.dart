@@ -6,7 +6,7 @@ import '../models/modular_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
-import '../theme/app_theme.dart';
+import '../widgets/app_update_dialog.dart';
 import 'dashboard_view.dart';
 import 'erika_view.dart';
 import 'fiado_view.dart';
@@ -63,74 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: !remote.forceUpdate,
-      builder: (ctx) => PopScope(
-        canPop: !remote.forceUpdate,
-        child: AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Icon(Icons.system_update,
-                  color: AppTheme.primaryTeal, size: 28),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  remote.forceUpdate
-                      ? 'Actualización Obligatoria (v${remote.version})'
-                      : 'Nueva Versión Disponible (v${remote.version})',
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                remote.forceUpdate
-                    ? 'Se ha publicado una actualización importante. Instala la nueva versión para continuar:'
-                    : 'Hay una nueva versión disponible con mejoras:',
-                style: const TextStyle(fontSize: 13.5),
-              ),
-              if (remote.changelog.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    remote.changelog,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            if (!remote.forceUpdate)
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Más tarde'),
-              ),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.primaryTeal,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                await AppUpdateService.launchUpdateDownload(remote);
-              },
-              icon: const Icon(Icons.download),
-              label: const Text('Actualizar Ahora'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => AppUpdateDialog(remote: remote),
     );
   }
 

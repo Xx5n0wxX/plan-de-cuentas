@@ -44,6 +44,29 @@ class MainActivity : FlutterActivity() {
                 } else {
                     result.error("INVALID_URL", "URL is empty", null)
                 }
+            } else if (call.method == "installApk") {
+                val filePath = call.argument<String>("filePath")
+                if (!filePath.isNullOrEmpty()) {
+                    try {
+                        val file = java.io.File(filePath)
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            this,
+                            "${packageName}.fileprovider",
+                            file
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/vnd.android.package-archive")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("INSTALL_ERROR", e.message, null)
+                    }
+                } else {
+                    result.error("INVALID_PATH", "Path is empty", null)
+                }
             } else {
                 result.notImplemented()
             }
