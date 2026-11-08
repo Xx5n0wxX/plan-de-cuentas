@@ -15,6 +15,7 @@ import '../services/local_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
 import '../widgets/export_options_dialog.dart';
+import '../widgets/ota_restart_dialog.dart';
 import '../widgets/qr_scanner_dialog.dart';
 import 'modular_views.dart';
 
@@ -773,36 +774,12 @@ class _SettingsViewState extends State<SettingsView> {
                           final ok = await AppUpdateService.downloadShorebirdPatch();
                           if (!context.mounted) return;
                           if (ok) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Row(
-                                  children: [
-                                    Icon(Icons.bolt, color: Colors.amber),
-                                    SizedBox(width: 8),
-                                    Text('¡Parche Aplicado!'),
-                                  ],
-                                ),
-                                content: const Text(
-                                  'La actualización se descargó e instaló instantáneamente en tu almacenamiento interno.\n\nPor favor cierra y vuelve a abrir la app para disfrutar de las novedades sin reinstalar el APK.',
-                                ),
-                                actions: [
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('Entendido'),
-                                  ),
-                                ],
-                              ),
-                            );
                             setState(() {});
+                            await showOtaRestartDialog(context);
                             return;
                           }
                         } else if (status == UpdateStatus.restartRequired) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('✓ Ya tienes una actualización lista. Cierra y abre la app.'),
-                            ),
-                          );
+                          await showOtaRestartDialog(context);
                           return;
                         } else if (status == UpdateStatus.upToDate) {
                           ScaffoldMessenger.of(context).showSnackBar(

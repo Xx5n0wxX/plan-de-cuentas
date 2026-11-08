@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show exit;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -82,6 +83,28 @@ class AppUpdateService {
       debugPrint('[Shorebird] Error al descargar parche: $e');
       return false;
     }
+  }
+
+  /// Comprueba si hay un parche OTA listo para aplicar (descargándolo si hace falta).
+  /// Retorna true cuando solo falta reiniciar la app para aplicarlo.
+  static Future<bool> prepareShorebirdPatch() async {
+    if (!isShorebirdAvailable) return false;
+    final status = await checkShorebirdUpdate();
+    if (status == UpdateStatus.restartRequired) return true;
+    if (status == UpdateStatus.outdated) {
+      return downloadShorebirdPatch();
+    }
+    return false;
+  }
+
+  /// Cierra completamente la app (proceso incluido) para que Shorebird aplique
+  /// el parche al volver a abrirla. Solo en Android.
+  static Future<void> closeAppToApplyPatch() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    await SystemNavigator.pop();
+    // Asegura que el proceso termine para que el nuevo parche se cargue al reabrir.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    exit(0);
   }
 
   /// Evita que el modal de actualización vuelva a interrumpir en la misma sesión si el usuario ya lo descartó o instaló

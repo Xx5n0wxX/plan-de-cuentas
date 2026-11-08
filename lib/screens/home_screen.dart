@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 import '../models/modular_models.dart';
 import '../providers/auth_provider.dart';
@@ -10,6 +9,7 @@ import '../services/app_update_service.dart';
 import '../services/local_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
+import '../widgets/ota_restart_dialog.dart';
 import '../widgets/quick_action_bottom_sheet.dart';
 import 'dashboard_view.dart';
 import 'debts_hub_view.dart';
@@ -27,13 +27,24 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _selectedRoute = 'dashboard';
   StreamSubscription<bool>? _revocationSub;
+  bool _otaDialogShown = false;
+  bool _checkingOta = false;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Al volver a la app desde segundo plano, revisar si llegó un parche nuevo.
+    if (state == AppLifecycleState.resumed) {
+      _checkInAppUpdates();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final auth = context.read<AuthProvider>();
@@ -63,36 +74,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkInAppUpdates() async {
     // 1. Si Shorebird está activo (Android con motor de parches OTA):
     if (AppUpdateService.isShorebirdAvailable) {
+      if (_otaDialogShown || _checkingOta) return;
+      _checkingOta = true;
       try {
-        final status = await AppUpdateService.checkShorebirdUpdate();
-        if (status == UpdateStatus.outdated && mounted) {
-          final success = await AppUpdateService.downloadShorebirdPatch();
-          if (success && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.bolt, color: Colors.amberAccent, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Actualización rápida lista. Se aplicará al reiniciar la app.',
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: const Color(0xFF0F766E),
-                duration: const Duration(seconds: 6),
-                action: SnackBarAction(
-                  label: 'Revisar',
-                  textColor: Colors.white,
-                  onPressed: () => _navigateToRoute('settings'),
-                ),
-              ),
-            );
-          }
+        // Cubre ambos casos: parche pendiente de descarga, o ya descargado
+        // en segundo plano por el motor (auto_update) esperando reinicio.
+        final ready = await AppUpdateService.prepareShorebirdPatch();
+        if (ready && mounted && !_otaDialogShown) {
+          _otaDialogShown = true;
+          await showOtaRestartDialog(context);
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        _checkingOta = false;
+      }
       return;
     }
 
@@ -114,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _revocationSub?.cancel();
     super.dispose();
   }
