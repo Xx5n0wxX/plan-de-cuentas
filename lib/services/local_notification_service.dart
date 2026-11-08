@@ -57,7 +57,7 @@ class LocalNotificationService {
 
     try {
       await _plugin.initialize(
-        settings: initSettings,
+        initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint('Notification clicked: ${response.payload}');
         },
@@ -151,10 +151,10 @@ class LocalNotificationService {
 
     try {
       await _plugin.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: details,
+        id,
+        title,
+        body,
+        details,
         payload: payload,
       );
     } catch (e) {
@@ -199,12 +199,14 @@ class LocalNotificationService {
 
     try {
       await _plugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: tzDate,
-        notificationDetails: details,
+        id,
+        title,
+        body,
+        tzDate,
+        details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
     } catch (e) {
