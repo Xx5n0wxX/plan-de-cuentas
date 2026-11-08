@@ -68,7 +68,12 @@ class _ExportOptionsSheetState extends State<ExportOptionsSheet> {
       }
     } catch (e) {
       if (mounted) {
-        if (e is GoogleSheetsPermissionException) {
+        final errText = e.toString().toLowerCase();
+        if (e is GoogleSheetsPermissionException ||
+            errText.contains('403') ||
+            errText.contains('permission') ||
+            errText.contains('insufficient') ||
+            errText.contains('autorizar')) {
           _promptGoogleDriveReauthorization();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -98,11 +103,11 @@ class _ExportOptionsSheetState extends State<ExportOptionsSheet> {
           children: [
             Icon(Icons.security, color: Color(0xFF0F9D58)),
             SizedBox(width: 10),
-            Expanded(child: Text('Permiso de Google Drive')),
+            Expanded(child: Text('Permiso de Google Sheets y Drive')),
           ],
         ),
         content: const Text(
-          'Google requiere que autorices el permiso para que Plan de Cuentas cree la hoja de cálculo en tu Google Drive.\n\nPresiona "Autorizar" para conceder el acceso en la ventana de Google y generar tu planilla.',
+          'Google requiere conceder permisos de acceso para crear y guardar la hoja de cálculo en tu cuenta de Google.\n\nPresiona "Autorizar" para actualizar los permisos en la ventana oficial de Google y generar tu planilla.',
         ),
         actions: [
           TextButton(
@@ -138,6 +143,13 @@ class _ExportOptionsSheetState extends State<ExportOptionsSheet> {
               builder: (ctx) => GoogleSheetSuccessDialog(result: result),
             );
           }
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'No se pudo completar la autorización con Google. Intenta nuevamente.'),
+            ),
+          );
         }
       } catch (e) {
         if (mounted) {

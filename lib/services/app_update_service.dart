@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppVersionInfo {
@@ -36,13 +37,52 @@ class AppVersionInfo {
 }
 
 class AppUpdateService {
-  static const String currentVersion = '2.5.1';
-  static const int currentBuildNumber = 251;
+  static const String currentVersion = '2.6.0';
+  static const int currentBuildNumber = 260;
   static const String versionJsonUrl =
       'https://plan-de-cuentas-45670.web.app/version.json';
 
   static const MethodChannel _channel =
       MethodChannel('com.diegoplan.plan_de_cuentas/updater');
+
+  static final ShorebirdUpdater _shorebird = ShorebirdUpdater();
+
+  /// Indica si la app está corriendo con el motor Shorebird activo (Android compilado con Shorebird)
+  static bool get isShorebirdAvailable => _shorebird.isAvailable;
+
+  /// Retorna el número de parche actual instalado (null si está en la versión base sin parches)
+  static Future<int?> getShorebirdCurrentPatch() async {
+    if (!isShorebirdAvailable) return null;
+    try {
+      final patch = await _shorebird.readCurrentPatch();
+      return patch?.number;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Verifica el estado de actualización con los servidores de Shorebird
+  static Future<UpdateStatus> checkShorebirdUpdate() async {
+    if (!isShorebirdAvailable) return UpdateStatus.unavailable;
+    try {
+      return await _shorebird.checkForUpdate();
+    } catch (_) {
+      return UpdateStatus.unavailable;
+    }
+  }
+
+  /// Descarga e instala en segundo plano el parche OTA en la carpeta privada interna
+  /// Tarda 1-2 segundos. Retorna true si se instaló exitosamente.
+  static Future<bool> downloadShorebirdPatch() async {
+    if (!isShorebirdAvailable) return false;
+    try {
+      await _shorebird.update();
+      return true;
+    } catch (e) {
+      debugPrint('[Shorebird] Error al descargar parche: $e');
+      return false;
+    }
+  }
 
   /// Evita que el modal de actualización vuelva a interrumpir en la misma sesión si el usuario ya lo descartó o instaló
   static bool hasDismissedOrUpdatedInSession = false;

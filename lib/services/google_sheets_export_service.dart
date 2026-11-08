@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:excel/excel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -50,14 +51,146 @@ class GoogleSheetsExportService {
     final title = customTitle ??
         'Plan de Cuentas - ${DateFormat("dd/MM/yyyy HH:mm", 'es_CL').format(DateTime.now())}';
 
-    // 1. Generar libro de trabajo Excel estructurado con los 11 módulos
+    // 1. Generar libro de trabajo estructurado con los 11 módulos
     final excel = ExcelExportService.buildExcelDocument(provider);
+
+    // Estrategia 1: API nativa de Google Sheets v4 (evita restricciones de carpeta en Drive)
+    try {
+      final result = await _exportViaGoogleSheetsApi(
+        excel: excel,
+        title: title,
+        accessToken: accessToken,
+      );
+      if (result != null) return result;
+    } catch (e) {
+      debugPrint('Exportación vía Sheets API v4 falló o requiere permisos: $e');
+      if (e is GoogleSheetsPermissionException) {
+        // Intentar fallback multipart antes de lanzar excepción definitiva
+      }
+    }
+
+    // Estrategia 2: Subida multipart a Google Drive con conversión a hoja de cálculo
+    return await _exportViaGoogleDriveMultipart(
+      excel: excel,
+      title: title,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Estrategia nativa mediante Google Sheets API v4
+  Future<GoogleSheetExportResult?> _exportViaGoogleSheetsApi({
+    required Excel excel,
+    required String title,
+    required String accessToken,
+  }) async {
+    // 1. Crear la hoja con las pestañas de los módulos
+    final sheetsMeta = <Map<String, dynamic>>[];
+    for (final sheetName in excel.tables.keys) {
+      sheetsMeta.add({
+        'properties': {
+          'title': sheetName,
+        }
+      });
+    }
+
+    final createUri =
+        Uri.parse('https://sheets.googleapis.com/v4/spreadsheets');
+    final createRes = await http.post(
+      createUri,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'properties': {'title': title},
+        'sheets': sheetsMeta,
+      }),
+    );
+
+    if (createRes.statusCode == 401 || createRes.statusCode == 403) {
+      debugPrint('Sheets API v4 403: ${createRes.body}');
+      throw GoogleSheetsPermissionException(
+        'Tu cuenta de Google requiere autorizar el permiso para crear hojas de cálculo en Google Sheets.',
+        statusCode: createRes.statusCode,
+        responseBody: createRes.body,
+      );
+    }
+
+    if (createRes.statusCode != 200 && createRes.statusCode != 201) {
+      debugPrint('Sheets API create error (${createRes.statusCode}): ${createRes.body}');
+      return null;
+    }
+
+    final data = jsonDecode(createRes.body) as Map<String, dynamic>;
+    final spreadsheetId = (data['spreadsheetId'] as String?) ?? '';
+    final spreadsheetUrl = (data['spreadsheetUrl'] as String?) ??
+        'https://docs.google.com/spreadsheets/d/$spreadsheetId/edit';
+
+    if (spreadsheetId.isEmpty) return null;
+
+    // 2. Poblar datos por cada pestaña usando batchUpdate de valores
+    final valueData = <Map<String, dynamic>>[];
+    for (final sheetName in excel.tables.keys) {
+      final sheet = excel.tables[sheetName]!;
+      final rowsData = <List<dynamic>>[];
+      for (final row in sheet.rows) {
+        final rowValues = <dynamic>[];
+        for (final cell in row) {
+          rowValues.add(_extractCellValue(cell?.value));
+        }
+        rowsData.add(rowValues);
+      }
+
+      if (rowsData.isNotEmpty) {
+        valueData.add({
+          'range': "'$sheetName'!A1",
+          'values': rowsData,
+        });
+      }
+    }
+
+    if (valueData.isNotEmpty) {
+      final updateUri = Uri.parse(
+        'https://sheets.googleapis.com/v4/spreadsheets/$spreadsheetId/values:batchUpdate',
+      );
+      final updateRes = await http.post(
+        updateUri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'valueInputOption': 'USER_ENTERED',
+          'data': valueData,
+        }),
+      );
+
+      if (updateRes.statusCode != 200 && updateRes.statusCode != 201) {
+        debugPrint(
+            'Sheets API batchUpdate warning: ${updateRes.statusCode} - ${updateRes.body}');
+      }
+    }
+
+    return GoogleSheetExportResult(
+      fileId: spreadsheetId,
+      name: title,
+      webViewLink: spreadsheetUrl,
+    );
+  }
+
+  /// Estrategia multipart mediante Google Drive API v3
+  Future<GoogleSheetExportResult> _exportViaGoogleDriveMultipart({
+    required Excel excel,
+    required String title,
+    required String accessToken,
+  }) async {
     final excelBytes = Uint8List.fromList(excel.save() ?? []);
     if (excelBytes.isEmpty) {
       throw Exception('No se pudieron generar los datos para Google Sheets');
     }
 
-    // 2. Preparar subida multipart a Google Drive con conversión automática a hoja de cálculo de Google
     const boundary = '===plan_de_cuentas_sheets_boundary===';
     final metadataJson = jsonEncode({
       'name': title,
@@ -95,17 +228,21 @@ class GoogleSheetsExportService {
       body: fullBody,
     );
 
-    if (response.statusCode == 403) {
-      debugPrint('Google Sheets upload 403: ${response.body}');
+    if (response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.body.contains('insufficientFilePermissions') ||
+        response.body.contains('insufficientPermissions')) {
+      debugPrint('Google Sheets upload permission error 403: ${response.body}');
       throw GoogleSheetsPermissionException(
         'Tu cuenta de Google requiere autorizar el permiso para crear hojas de cálculo en Google Drive.',
-        statusCode: 403,
+        statusCode: response.statusCode,
         responseBody: response.body,
       );
     }
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      debugPrint('Google Sheets upload error: ${response.statusCode} - ${response.body}');
+      debugPrint(
+          'Google Sheets upload error: ${response.statusCode} - ${response.body}');
       throw Exception(
         'Error creando hoja de cálculo (${response.statusCode}): ${response.body}',
       );
@@ -123,4 +260,27 @@ class GoogleSheetsExportService {
       webViewLink: webViewLink,
     );
   }
+
+  dynamic _extractCellValue(CellValue? val) {
+    if (val == null) return '';
+    if (val is TextCellValue) return val.value.text ?? '';
+    if (val is IntCellValue) return val.value;
+    if (val is DoubleCellValue) return val.value;
+    if (val is BoolCellValue) return val.value;
+    if (val is DateCellValue) {
+      return '${val.year}-${val.month.toString().padLeft(2, '0')}-${val.day.toString().padLeft(2, '0')}';
+    }
+    if (val is DateTimeCellValue) {
+      return '${val.year}-${val.month.toString().padLeft(2, '0')}-${val.day.toString().padLeft(2, '0')} '
+          '${val.hour.toString().padLeft(2, '0')}:${val.minute.toString().padLeft(2, '0')}';
+    }
+    if (val is TimeCellValue) {
+      return '${val.hour.toString().padLeft(2, '0')}:${val.minute.toString().padLeft(2, '0')}:${val.second.toString().padLeft(2, '0')}';
+    }
+    if (val is FormulaCellValue) {
+      return val.formula;
+    }
+    return val.toString();
+  }
 }
+

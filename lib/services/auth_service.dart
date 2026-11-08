@@ -80,6 +80,7 @@ class AppUser {
 }
 
 class AuthService {
+  static const String driveScope = 'https://www.googleapis.com/auth/drive';
   static const String driveFileScope =
       'https://www.googleapis.com/auth/drive.file';
   static const String sheetsScope =
@@ -92,6 +93,7 @@ class AuthService {
       GoogleDriveBackupService.driveAppDataScope,
       driveFileScope,
       sheetsScope,
+      driveScope,
     ],
   );
 
@@ -278,10 +280,20 @@ class AuthService {
         return session?.accessToken;
       }
 
-      final requiredScopes = [driveFileScope, sheetsScope];
+      final requiredScopes = [
+        sheetsScope,
+        driveFileScope,
+        driveScope,
+      ];
 
       GoogleSignInAccount? account = _googleSignIn.currentUser;
       account ??= await _googleSignIn.signInSilently();
+
+      if (forcePrompt && account != null) {
+        try {
+          await account.clearAuthCache();
+        } catch (_) {}
+      }
 
       bool hasAccess = false;
       if (!forcePrompt && account != null) {
@@ -296,18 +308,33 @@ class AuthService {
           granted = await _googleSignIn.requestScopes(requiredScopes);
         } catch (_) {}
 
-        if (!granted) {
+        if (!granted || forcePrompt) {
+          try {
+            await _googleSignIn.signOut();
+          } catch (_) {}
           final fullAccount = await _googleSignIn.signIn();
           if (fullAccount == null) return null;
           account = fullAccount;
         } else {
           account = _googleSignIn.currentUser;
         }
+
+        if (account != null) {
+          try {
+            await account.clearAuthCache();
+          } catch (_) {}
+        }
       }
 
       if (account != null) {
         final auth = await account.authentication;
-        return auth.accessToken;
+        if (auth.accessToken != null && auth.accessToken!.isNotEmpty) {
+          final session = await getSavedSession();
+          if (session != null) {
+            await _persistUser(session.copyWith(accessToken: auth.accessToken));
+          }
+          return auth.accessToken;
+        }
       }
     } catch (e) {
       debugPrint('Error en ensureScopesForGoogleSheets: $e');

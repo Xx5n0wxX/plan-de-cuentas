@@ -22,8 +22,9 @@ Write-Output "1/5 Compilando version Web/Cloud..."
 Copy-Item "web\version.json" "build\web\version.json" -Force
 Remove-Item "build\web\downloads" -Recurse -Force -ErrorAction SilentlyContinue
 
-Write-Output "2/5 Compilando APK de Android..."
-& "C:\src\flutter\bin\flutter.bat" build apk --release
+Write-Output "2/5 Compilando APK de Android con motor Shorebird OTA..."
+Remove-Item -Recurse -Force ".dart_tool\hooks_runner" -ErrorAction SilentlyContinue
+& "$HOME\.shorebird\bin\shorebird.ps1" release android --artifact apk
 Copy-Item "build\app\outputs\flutter-apk\app-release.apk" "c:\Herramientas\MICROAPPS\PLAN DE CUENTAS\instaladores\PlanDeCuentas_Android.apk" -Force
 Copy-Item "build\app\outputs\flutter-apk\app-release.apk" "$env:USERPROFILE\Desktop\PlanDeCuentas_Android.apk" -Force
 

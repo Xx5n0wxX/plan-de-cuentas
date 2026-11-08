@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 import '../models/modular_models.dart';
 import '../providers/auth_provider.dart';
@@ -104,7 +105,12 @@ class _SettingsViewState extends State<SettingsView> {
       }
     } catch (e) {
       if (context.mounted) {
-        if (e is GoogleSheetsPermissionException) {
+        final errText = e.toString().toLowerCase();
+        if (e is GoogleSheetsPermissionException ||
+            errText.contains('403') ||
+            errText.contains('permission') ||
+            errText.contains('insufficient') ||
+            errText.contains('autorizar')) {
           _promptGoogleDriveReauthorization(context, provider);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -133,11 +139,11 @@ class _SettingsViewState extends State<SettingsView> {
           children: [
             Icon(Icons.security, color: Color(0xFF0F9D58)),
             SizedBox(width: 10),
-            Expanded(child: Text('Permiso de Google Drive')),
+            Expanded(child: Text('Permiso de Google Sheets y Drive')),
           ],
         ),
         content: const Text(
-          'Google requiere que autorices el permiso para que Plan de Cuentas cree y guarde la hoja de cálculo en tu Google Drive.\n\nPresiona "Autorizar" para conceder el acceso en la ventana de Google y generar tu planilla.',
+          'Google requiere conceder permisos de acceso para crear y guardar la hoja de cálculo en tu cuenta de Google.\n\nPresiona "Autorizar" para actualizar los permisos en la ventana oficial de Google y generar tu planilla.',
         ),
         actions: [
           TextButton(
@@ -172,6 +178,13 @@ class _SettingsViewState extends State<SettingsView> {
               builder: (ctx) => GoogleSheetSuccessDialog(result: result),
             );
           }
+        } else if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'No se pudo completar la autorización con Google. Intenta nuevamente.'),
+            ),
+          );
         }
       } catch (e) {
         if (context.mounted) {
@@ -674,83 +687,166 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Widget _buildOtaUpdateCard(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final isShorebird = AppUpdateService.isShorebirdAvailable;
+
+    return FutureBuilder<int?>(
+      future: AppUpdateService.getShorebirdCurrentPatch(),
+      builder: (context, snapshot) {
+        final patchNumber = snapshot.data;
+        final versionLabel = isShorebird
+            ? (patchNumber != null
+                ? 'v${AppUpdateService.currentVersion} (Parche #$patchNumber) • OTA ⚡'
+                : 'v${AppUpdateService.currentVersion} • Base OTA ⚡')
+            : 'v${AppUpdateService.currentVersion} • 1-Toque';
+
+        return Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Versión instalada:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryTeal.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.bolt, size: 14, color: AppTheme.primaryTeal),
-                      SizedBox(width: 4),
-                      Text(
-                        'v${AppUpdateService.currentVersion} • Actualizaciones 1-Toque',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: AppTheme.primaryTeal,
-                        ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Versión instalada:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bolt, size: 14, color: AppTheme.primaryTeal),
+                          const SizedBox(width: 4),
+                          Text(
+                            versionLabel,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: AppTheme.primaryTeal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (isShorebird) ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Motor Over-The-Air (OTA) activo: los parches se descargan en 1-2 segundos sin reinstalar la app.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primaryTeal,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      if (isShorebird) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Comprobando parches OTA en Shorebird...'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        final status = await AppUpdateService.checkShorebirdUpdate();
+                        if (!context.mounted) return;
+
+                        if (status == UpdateStatus.outdated) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('⚡ Descargando parche ligero (~1 MB)...'),
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                          final ok = await AppUpdateService.downloadShorebirdPatch();
+                          if (!context.mounted) return;
+                          if (ok) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Row(
+                                  children: [
+                                    Icon(Icons.bolt, color: Colors.amber),
+                                    SizedBox(width: 8),
+                                    Text('¡Parche Aplicado!'),
+                                  ],
+                                ),
+                                content: const Text(
+                                  'La actualización se descargó e instaló instantáneamente en tu almacenamiento interno.\n\nPor favor cierra y vuelve a abrir la app para disfrutar de las novedades sin reinstalar el APK.',
+                                ),
+                                actions: [
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Entendido'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            setState(() {});
+                            return;
+                          }
+                        } else if (status == UpdateStatus.restartRequired) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✓ Ya tienes una actualización lista. Cierra y abre la app.'),
+                            ),
+                          );
+                          return;
+                        } else if (status == UpdateStatus.upToDate) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✓ Tu aplicación está en el parche más reciente de Shorebird.'),
+                            ),
+                          );
+                          return;
+                        }
+                      }
+
+                      // Flujo para Windows Desktop o si Shorebird no detecta parche
+                      final remote = await AppUpdateService.checkRemoteVersion();
+                      if (!context.mounted) return;
+                      if (remote == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('No se pudo conectar al servidor de actualizaciones.'),
+                          ),
+                        );
+                        return;
+                      }
+                      if (AppUpdateService.isUpdateAvailable(remote)) {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AppUpdateDialog(remote: remote),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('✓ Ya tienes la última versión (v${remote.version}).'),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.system_update),
+                    label: const Text('Buscar e Instalar Actualización'),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primaryTeal,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () async {
-                  final remote = await AppUpdateService.checkRemoteVersion();
-                  if (!context.mounted) return;
-                  if (remote == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No se pudo conectar al servidor de actualizaciones.'),
-                      ),
-                    );
-                    return;
-                  }
-                  if (AppUpdateService.isUpdateAvailable(remote)) {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AppUpdateDialog(remote: remote),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('✓ Ya tienes la última versión (v${remote.version}).'),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.system_update),
-                label: const Text('Buscar e Instalar Actualización'),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

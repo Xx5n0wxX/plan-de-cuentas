@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 import '../models/modular_models.dart';
 import '../providers/auth_provider.dart';
@@ -60,6 +61,42 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkInAppUpdates() async {
+    // 1. Si Shorebird está activo (Android con motor de parches OTA):
+    if (AppUpdateService.isShorebirdAvailable) {
+      try {
+        final status = await AppUpdateService.checkShorebirdUpdate();
+        if (status == UpdateStatus.outdated && mounted) {
+          final success = await AppUpdateService.downloadShorebirdPatch();
+          if (success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.bolt, color: Colors.amberAccent, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Actualización rápida lista. Se aplicará al reiniciar la app.',
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF0F766E),
+                duration: const Duration(seconds: 6),
+                action: SnackBarAction(
+                  label: 'Revisar',
+                  textColor: Colors.white,
+                  onPressed: () => _navigateToRoute('settings'),
+                ),
+              ),
+            );
+          }
+        }
+      } catch (_) {}
+      return;
+    }
+
+    // 2. Si no es Shorebird (Windows o Web), usar el flujo tradicional:
     final remote = await AppUpdateService.checkRemoteVersion();
     if (!mounted || remote == null) return;
     if (AppUpdateService.isUpdateAvailable(remote)) {
