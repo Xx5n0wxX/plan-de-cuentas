@@ -16,6 +16,22 @@ void main() {
     test('CurrencyFormatter masks currency when privacy mode is active', () {
       final realFormatted = CurrencyFormatter.format(150000);
       expect(realFormatted.contains('150.000'), isTrue);
+      // El signo $ debe ir antes de los números
+      expect(realFormatted, '\$150.000');
+      expect(CurrencyFormatter.format(-2500), '-\$2.500');
+      expect(
+        CurrencyFormatter.formatLoanReceipt(
+          creditor: 'Erika',
+          label: 'No 7',
+          loanNumber: 7,
+          currentCuota: 2,
+          totalCuotas: 5,
+          amount: 190000,
+          customTemplate:
+              'PRESTAMO {ACREEDOR} [{ETIQUETA}] CUOTA {CUOTA}/{TOTAL} {MONTO}.-',
+        ),
+        'PRESTAMO ERIKA [No 7] CUOTA 2/5 \$190.000.-',
+      );
       
       CurrencyFormatter.isPrivacyMode = true;
       expect(CurrencyFormatter.format(150000), CurrencyFormatter.maskedCurrency);

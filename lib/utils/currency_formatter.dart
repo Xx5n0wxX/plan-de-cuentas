@@ -1,27 +1,32 @@
 import 'package:intl/intl.dart';
 
 class CurrencyFormatter {
-  static final NumberFormat _clpFormat = NumberFormat.currency(
-    locale: 'es_CL',
-    symbol: '\$',
-    decimalDigits: 0,
-  );
+  /// Formato numérico chileno (separador de miles con punto, sin decimales).
+  /// El signo $ se antepone manualmente porque el locale es_CL lo ubica al final.
+  static final NumberFormat _clpNumber = NumberFormat('#,##0', 'es_CL');
 
   static bool isPrivacyMode = false;
   static const String maskedCurrency = '\$ ••••••';
+
+  /// Devuelve el monto con el signo $ antes de los números: $190.000 / -$190.000
+  static String _formatClp(num amount) {
+    final rounded = amount.round();
+    final digits = _clpNumber.format(rounded.abs());
+    return rounded < 0 ? '-\$$digits' : '\$$digits';
+  }
 
   static String format(double amount, {bool allowPrivacy = true}) {
     if (allowPrivacy && isPrivacyMode) {
       return maskedCurrency;
     }
-    return _clpFormat.format(amount);
+    return _formatClp(amount);
   }
 
   static String formatInt(int amount, {bool allowPrivacy = true}) {
     if (allowPrivacy && isPrivacyMode) {
       return maskedCurrency;
     }
-    return _clpFormat.format(amount);
+    return _formatClp(amount);
   }
 
   /// Genera un comprobante de cuota a partir de la plantilla del préstamo o acreedor.
@@ -35,7 +40,7 @@ class CurrencyFormatter {
     required double amount,
     String? customTemplate,
   }) {
-    final formattedAmount = _clpFormat.format(amount).replaceAll(' ', '');
+    final formattedAmount = _formatClp(amount);
     final cleanCreditor = creditor.trim().toUpperCase();
 
     // Si tiene plantilla personalizada o usa formato clásico PRESTAMO [ACREEDOR] [No X]
