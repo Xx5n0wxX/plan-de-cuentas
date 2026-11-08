@@ -39,7 +39,8 @@ class _ExportOptionsSheetState extends State<ExportOptionsSheet> {
     setState(() => _isExportingSheets = true);
 
     try {
-      final token = await auth.ensureGoogleDriveAccessToken();
+      final token =
+          await auth.ensureGoogleDriveAccessToken(forGoogleSheets: true);
       if (!mounted) return;
       if (token == null || token.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,26 +52,104 @@ class _ExportOptionsSheetState extends State<ExportOptionsSheet> {
         return;
       }
 
-      final result = await finance.exportToGoogleSheets(accessToken: token);
+      try {
+        final result = await finance.exportToGoogleSheets(accessToken: token);
 
-      if (!mounted) return;
-      Navigator.of(context).pop(); // Cierra el bottom sheet
-      showDialog(
-        context: context,
-        builder: (ctx) => GoogleSheetSuccessDialog(result: result),
-      );
+        if (!mounted) return;
+        Navigator.of(context).pop(); // Cierra el bottom sheet
+        showDialog(
+          context: context,
+          builder: (ctx) => GoogleSheetSuccessDialog(result: result),
+        );
+      } on GoogleSheetsPermissionException {
+        if (mounted) {
+          _promptGoogleDriveReauthorization();
+        }
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al crear hoja de cálculo: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        if (e is GoogleSheetsPermissionException) {
+          _promptGoogleDriveReauthorization();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al crear hoja de cálculo: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
         setState(() => _isExportingSheets = false);
+      }
+    }
+  }
+
+  Future<void> _promptGoogleDriveReauthorization() async {
+    final auth = context.read<AuthProvider>();
+    final finance = context.read<FinanceProvider>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.security, color: Color(0xFF0F9D58)),
+            SizedBox(width: 10),
+            Expanded(child: Text('Permiso de Google Drive')),
+          ],
+        ),
+        content: const Text(
+          'Google requiere que autorices el permiso para que Plan de Cuentas cree la hoja de cálculo en tu Google Drive.\n\nPresiona "Autorizar" para conceder el acceso en la ventana de Google y generar tu planilla.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F9D58),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Autorizar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => _isExportingSheets = true);
+      try {
+        final token = await auth.ensureGoogleDriveAccessToken(
+          forGoogleSheets: true,
+          forcePrompt: true,
+        );
+        if (token != null && token.isNotEmpty && mounted) {
+          final result =
+              await finance.exportToGoogleSheets(accessToken: token);
+          if (mounted) {
+            Navigator.of(context).pop(); // Cierra el bottom sheet
+            showDialog(
+              context: context,
+              builder: (ctx) => GoogleSheetSuccessDialog(result: result),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No se pudo completar la autorización: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isExportingSheets = false);
       }
     }
   }

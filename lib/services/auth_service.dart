@@ -82,6 +82,8 @@ class AppUser {
 class AuthService {
   static const String driveFileScope =
       'https://www.googleapis.com/auth/drive.file';
+  static const String sheetsScope =
+      'https://www.googleapis.com/auth/spreadsheets';
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
@@ -89,6 +91,7 @@ class AuthService {
       'profile',
       GoogleDriveBackupService.driveAppDataScope,
       driveFileScope,
+      sheetsScope,
     ],
   );
 
@@ -260,6 +263,55 @@ class AuthService {
         }
       }
     } catch (_) {}
+    return null;
+  }
+
+  /// Verifica y solicita interactivamente los permisos requeridos para Google Sheets y Drive
+  Future<String?> ensureScopesForGoogleSheets({bool forcePrompt = false}) async {
+    try {
+      if (kIsWeb) {
+        if (forcePrompt) {
+          final u = await signInWithGoogle();
+          return u?.accessToken;
+        }
+        final session = await getSavedSession();
+        return session?.accessToken;
+      }
+
+      final requiredScopes = [driveFileScope, sheetsScope];
+
+      GoogleSignInAccount? account = _googleSignIn.currentUser;
+      account ??= await _googleSignIn.signInSilently();
+
+      bool hasAccess = false;
+      if (!forcePrompt && account != null) {
+        try {
+          hasAccess = await _googleSignIn.canAccessScopes(requiredScopes);
+        } catch (_) {}
+      }
+
+      if (!hasAccess || forcePrompt) {
+        bool granted = false;
+        try {
+          granted = await _googleSignIn.requestScopes(requiredScopes);
+        } catch (_) {}
+
+        if (!granted) {
+          final fullAccount = await _googleSignIn.signIn();
+          if (fullAccount == null) return null;
+          account = fullAccount;
+        } else {
+          account = _googleSignIn.currentUser;
+        }
+      }
+
+      if (account != null) {
+        final auth = await account.authentication;
+        return auth.accessToken;
+      }
+    } catch (e) {
+      debugPrint('Error en ensureScopesForGoogleSheets: $e');
+    }
     return null;
   }
 

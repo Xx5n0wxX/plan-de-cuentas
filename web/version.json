@@ -1,8 +1,8 @@
 {
-  "version": "2.4.3",
-  "buildNumber": 243,
+  "version": "2.4.4",
+  "buildNumber": 244,
   "forceUpdate": false,
-  "changelog": "• Corrección del bucle de actualización: Sincronización exacta de número de compilación interno.\n• Cierre automático de ventana de actualización al abrir el instalador del sistema.\n• Exportación completa a Google Sheets (En línea) con las 11 pestañas organizadas.\n• Descarga de Excel (.xlsx) local sin conexión.\n• Corrección de bucle biométrico y mejoras generales.",
+  "changelog": "• Autorización de Google Drive para Google Sheets: Flujo interactivo para conceder permisos de creación y guardado en Google Drive en línea.\n• Manejo inteligente de error 403 con diálogo de autorización en un solo toque.\n• Exportación completa a Google Sheets con las 11 pestañas organizadas.\n• Descarga local de archivo Excel (.xlsx) sin conexión.\n• Corrección de bucles de actualización y biometría.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

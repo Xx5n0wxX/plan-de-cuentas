@@ -72,8 +72,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Obtiene un token válido para Google Drive (solicitando login si es necesario)
-  Future<String?> ensureGoogleDriveAccessToken() async {
+  /// Obtiene un token válido para Google Drive (solicitando login o permisos si es necesario)
+  Future<String?> ensureGoogleDriveAccessToken({
+    bool forGoogleSheets = false,
+    bool forcePrompt = false,
+  }) async {
+    if (forGoogleSheets || forcePrompt) {
+      final token = await _authService.ensureScopesForGoogleSheets(
+        forcePrompt: forcePrompt,
+      );
+      if (token != null && token.isNotEmpty) {
+        if (_user != null) {
+          _user = _user!.copyWith(accessToken: token);
+          notifyListeners();
+        }
+        return token;
+      }
+      return null;
+    }
+
     final fresh = await _authService.getFreshAccessToken();
     if (fresh != null && fresh.isNotEmpty) {
       if (_user != null) {

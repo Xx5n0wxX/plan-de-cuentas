@@ -7,6 +7,21 @@ import 'package:intl/intl.dart';
 import '../providers/finance_provider.dart';
 import 'excel_export_service.dart';
 
+class GoogleSheetsPermissionException implements Exception {
+  final String message;
+  final int statusCode;
+  final String responseBody;
+
+  GoogleSheetsPermissionException(
+    this.message, {
+    this.statusCode = 403,
+    this.responseBody = '',
+  });
+
+  @override
+  String toString() => message;
+}
+
 class GoogleSheetExportResult {
   final String fileId;
   final String name;
@@ -79,6 +94,15 @@ class GoogleSheetsExportService {
       },
       body: fullBody,
     );
+
+    if (response.statusCode == 403) {
+      debugPrint('Google Sheets upload 403: ${response.body}');
+      throw GoogleSheetsPermissionException(
+        'Tu cuenta de Google requiere autorizar el permiso para crear hojas de cálculo en Google Drive.',
+        statusCode: 403,
+        responseBody: response.body,
+      );
+    }
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       debugPrint('Google Sheets upload error: ${response.statusCode} - ${response.body}');
