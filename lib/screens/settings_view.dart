@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/modular_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
@@ -440,408 +441,362 @@ class _SettingsViewState extends State<SettingsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. SECCIÓN: DISPOSITIVOS VINCULADOS (ESTILO WHATSAPP WEB / DESKTOP)
-            const Text(
-              'Dispositivos vinculados (Live Sync QR)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Vincula Plan de Cuentas con tu PC escaneando el código QR, igual que en WhatsApp.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildLinkedDevicesCard(context, provider),
-            const SizedBox(height: 28),
-
-            // 2. SECCIÓN: COPIA DE SEGURIDAD EN GOOGLE DRIVE (ESTILO WHATSAPP)
-            const Text(
-              'Copia de seguridad en Google Drive',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Guarda tus cuentas, libreta de fiado y préstamos en el espacio seguro de tu Google Drive para restaurarlos si cambias de teléfono.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildGoogleDriveBackupCard(context, provider),
-            const SizedBox(height: 28),
-
-            // 2.5 SECCIÓN: PLANILLAS Y EXPORTACIÓN
-            const Text(
-              'Planillas y Exportación de Datos',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Crea una hoja de cálculo en vivo en Google Sheets editable en línea o descarga un archivo Excel (.xlsx) estructurado.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildExportCard(context, provider),
-            const SizedBox(height: 28),
-
-            // 2.7 SECCIÓN: NOTIFICACIONES Y VENCIMIENTOS
-            const Text(
-              'Notificaciones y Recordatorios',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Recibe alertas automáticas en tu teléfono antes y el día en que vencen tus cuotas de créditos, suscripciones y tarjetas.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildNotificationsCard(context, provider),
-            const SizedBox(height: 28),
-
-            // 2.8 SECCIÓN: SEGURIDAD Y BLOQUEO BIOMÉTRICO
-            const Text(
-              'Seguridad y Bloqueo Biométrico',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Protege tus datos financieros requiriendo tu huella digital, Face ID o PIN al abrir la aplicación.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildBiometricCard(context, bio),
-            const SizedBox(height: 28),
-
-            // 3. SECCIÓN: PERFIL Y CUENTA DE GOOGLE
-            const Text(
-              'Cuenta de Google Vinculada',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildProfileCard(context),
-            const SizedBox(height: 28),
-
-            // 3.5 SECCIÓN: ACTUALIZACIONES INTEGRADAS (OTA)
-            const Text(
-              'Actualizaciones de la Aplicación (OTA)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Comprueba e instala nuevas versiones directamente desde la aplicación sin desinstalar.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Versión instalada:',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryTeal.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bolt, size: 14, color: AppTheme.primaryTeal),
-                              SizedBox(width: 4),
-                              Text(
-                                'v${AppUpdateService.currentVersion} • Actualizaciones 1-Toque',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: AppTheme.primaryTeal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.primaryTeal,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () async {
-                          final remote =
-                              await AppUpdateService.checkRemoteVersion();
-                          if (!context.mounted) return;
-                          if (remote == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'No se pudo conectar al servidor de actualizaciones.'),
-                              ),
-                            );
-                            return;
-                          }
-                          if (AppUpdateService.isUpdateAvailable(remote)) {
-                            showDialog(
-                              context: context,
-                              builder: (_) => AppUpdateDialog(remote: remote),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '✓ Ya tienes la última versión (v${remote.version}).'),
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.system_update),
-                        label: const Text('Buscar e Instalar Actualización'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // 4. SECCIÓN: APARIENCIA Y TEMA
-            const Text(
-              'Apariencia de la Aplicación',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Elige el tema que mejor se adapte a tu comodidad visual.',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Tema de color',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<ThemeMode>(
-                        segments: const [
-                          ButtonSegment(
-                            value: ThemeMode.light,
-                            icon: Icon(Icons.light_mode_outlined),
-                            label: Text('Claro'),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.dark,
-                            icon: Icon(Icons.dark_mode_outlined),
-                            label: Text('Oscuro'),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.system,
-                            icon: Icon(Icons.brightness_auto_outlined),
-                            label: Text('Sistema'),
-                          ),
-                        ],
-                        selected: {provider.themeMode},
-                        onSelectionChanged: (Set<ThemeMode> newSelection) {
-                          provider.setThemeMode(newSelection.first);
-                        },
-                      ),
-                    ),
-                    const Divider(height: 28),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Modo Privacidad (Ocultar Saldos)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      subtitle: const Text(
-                        'Oculta los montos y balances con "\$ ••••••" en todas las vistas de la aplicación.',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      secondary: Icon(
-                        provider.isPrivacyMode
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: provider.isPrivacyMode
-                            ? Colors.amber.shade700
-                            : null,
-                      ),
-                      value: provider.isPrivacyMode,
-                      onChanged: (_) => provider.togglePrivacyMode(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // 5. SECCIÓN: GASTOS COMPARTIDOS (MODULAR)
-            const Text(
-              'Módulo de Gastos Compartidos',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Actívalo solo si en algún momento compartes arriendo, compras o salidas con otra persona.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Habilitar Gastos Compartidos',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(_sharedEnabled
-                          ? 'Módulo activo'
-                          : 'Desactivado (modo individual)'),
-                      value: _sharedEnabled,
-                      onChanged: (val) {
-                        setState(() => _sharedEnabled = val);
-                        _saveConfig();
-                      },
-                    ),
-                    if (_sharedEnabled) ...[
-                      const Divider(),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _partnerNameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre de la persona o entidad',
-                          hintText: 'Ej: Roommate, Hermano, Amigo...',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (_) => _saveConfig(),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'División de Gastos: Tu aporte ${_myPercentage.toInt()}% / Aporte de ${_partnerNameCtrl.text} ${(100 - _myPercentage).toInt()}%',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Slider(
-                        value: _myPercentage,
-                        min: 0,
-                        max: 100,
-                        divisions: 20,
-                        label: '${_myPercentage.toInt()}%',
-                        onChanged: (val) {
-                          setState(() => _myPercentage = val);
-                          _saveConfig();
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // 6. SECCIÓN: REINICIAR DATOS EN CERO
-            const Text(
-              'Restablecer Datos de la App',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // 1. SECCIÓN: PERFIL Y CUENTA DE GOOGLE
+            _buildSettingsGroupHeader(
+              title: 'Cuenta de Google y Sincronización',
+              icon: Icons.account_circle,
+              color: AppTheme.primaryTeal,
             ),
             const SizedBox(height: 10),
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Si deseas empezar un nuevo período o limpiar todos los registros para dejar la aplicación completamente en 0:',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title:
-                                const Text('Dejar la aplicación desde 0'),
-                            content: const Text(
-                              '¿Confirmas que deseas borrar todos los registros actuales y dejar todos los módulos en 0?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                child: const Text('Cancelar'),
-                              ),
-                              FilledButton(
-                                onPressed: () {
-                                  provider.clearAllDataToZero();
-                                  Navigator.of(ctx).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            '✓ Aplicación reiniciada en 0')),
-                                  );
-                                },
-                                child: const Text('Sí, dejar en 0'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.delete_sweep_outlined),
-                      label: const Text('Reiniciar Todo en 0'),
-                    ),
-                  ],
-                ),
+            _buildProfileCard(context),
+            const SizedBox(height: 12),
+            _buildLinkedDevicesCard(context, provider),
+            const SizedBox(height: 26),
+
+            // 2. SECCIÓN: SEGURIDAD Y PRIVACIDAD
+            _buildSettingsGroupHeader(
+              title: 'Seguridad y Privacidad',
+              icon: Icons.security,
+              color: const Color(0xFF10B981),
+            ),
+            const SizedBox(height: 10),
+            _buildBiometricCard(context, bio),
+            const SizedBox(height: 26),
+
+            // 3. SECCIÓN: NUBE Y EXPORTACIÓN DE DATOS
+            _buildSettingsGroupHeader(
+              title: 'Nube, Respaldos y Exportación',
+              icon: Icons.cloud_sync,
+              color: Colors.blue.shade700,
+            ),
+            const SizedBox(height: 10),
+            _buildGoogleDriveBackupCard(context, provider),
+            const SizedBox(height: 12),
+            _buildExportCard(context, provider),
+            const SizedBox(height: 26),
+
+            // 4. SECCIÓN: PREFERENCIAS Y APARIENCIA
+            _buildSettingsGroupHeader(
+              title: 'Preferencias y Apariencia',
+              icon: Icons.palette,
+              color: Colors.purple,
+            ),
+            const SizedBox(height: 10),
+            _buildNotificationsCard(context, provider),
+            const SizedBox(height: 12),
+            _buildAppearanceCard(context, provider),
+            const SizedBox(height: 26),
+
+            // 5. SECCIÓN: CONFIGURACIÓN DE PAREJA
+            if (provider.isModuleActive(AppModuleId.sharedExpenses) || _sharedEnabled) ...[
+              _buildSettingsGroupHeader(
+                title: 'Finanzas en Pareja (Gastos Compartidos)',
+                icon: Icons.favorite,
+                color: Colors.pink,
               ),
+              const SizedBox(height: 10),
+              _buildSharedExpensesConfigCard(context),
+              const SizedBox(height: 26),
+            ],
+
+            // 6. SECCIÓN: SISTEMA Y MANTENIMIENTO
+            _buildSettingsGroupHeader(
+              title: 'Sistema y Mantenimiento',
+              icon: Icons.tune,
+              color: Colors.blueGrey,
+            ),
+            const SizedBox(height: 10),
+            _buildOtaUpdateCard(context),
+            const SizedBox(height: 12),
+            _buildResetDataCard(context, provider),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsGroupHeader({
+    required String title,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppearanceCard(BuildContext context, FinanceProvider provider) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tema visual',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    icon: Icon(Icons.light_mode_outlined),
+                    label: Text('Claro'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    icon: Icon(Icons.dark_mode_outlined),
+                    label: Text('Oscuro'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    icon: Icon(Icons.brightness_auto_outlined),
+                    label: Text('Sistema'),
+                  ),
+                ],
+                selected: {provider.themeMode},
+                onSelectionChanged: (Set<ThemeMode> newSelection) {
+                  provider.setThemeMode(newSelection.first);
+                },
+              ),
+            ),
+            const Divider(height: 28),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Modo Privacidad (Ocultar Saldos)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              subtitle: const Text(
+                'Oculta los montos y balances con "\$ ••••••" en todas las vistas de la aplicación.',
+                style: TextStyle(fontSize: 13),
+              ),
+              secondary: Icon(
+                provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+                color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+              ),
+              value: provider.isPrivacyMode,
+              onChanged: (_) => provider.togglePrivacyMode(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSharedExpensesConfigCard(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Habilitar Gastos Compartidos',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(_sharedEnabled
+                  ? 'Módulo activo'
+                  : 'Desactivado (modo individual)'),
+              value: _sharedEnabled,
+              onChanged: (val) {
+                setState(() => _sharedEnabled = val);
+                _saveConfig();
+              },
+            ),
+            if (_sharedEnabled) ...[
+              const Divider(),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _partnerNameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de la pareja o compañero/a',
+                  hintText: 'Ej: Erika, Roommate...',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => _saveConfig(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'División de Gastos: Tu aporte ${_myPercentage.toInt()}% / Aporte de ${_partnerNameCtrl.text} ${(100 - _myPercentage).toInt()}%',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Slider(
+                value: _myPercentage,
+                min: 0,
+                max: 100,
+                divisions: 20,
+                label: '${_myPercentage.toInt()}%',
+                onChanged: (val) {
+                  setState(() => _myPercentage = val);
+                  _saveConfig();
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOtaUpdateCard(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Versión instalada:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bolt, size: 14, color: AppTheme.primaryTeal),
+                      SizedBox(width: 4),
+                      Text(
+                        'v${AppUpdateService.currentVersion} • Actualizaciones 1-Toque',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppTheme.primaryTeal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryTeal,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  final remote = await AppUpdateService.checkRemoteVersion();
+                  if (!context.mounted) return;
+                  if (remote == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No se pudo conectar al servidor de actualizaciones.'),
+                      ),
+                    );
+                    return;
+                  }
+                  if (AppUpdateService.isUpdateAvailable(remote)) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AppUpdateDialog(remote: remote),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('✓ Ya tienes la última versión (v${remote.version}).'),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.system_update),
+                label: const Text('Buscar e Instalar Actualización'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResetDataCard(BuildContext context, FinanceProvider provider) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Restablecer Datos de la Aplicación',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Borra todos los registros actuales y deja todos los módulos completamente en 0.',
+              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade700,
+                side: BorderSide(color: Colors.red.shade300),
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Dejar la aplicación desde 0'),
+                    content: const Text(
+                      '¿Confirmas que deseas borrar todos los registros actuales y dejar todos los módulos en 0?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          provider.clearAllDataToZero();
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('✓ Aplicación reiniciada en 0')),
+                          );
+                        },
+                        child: const Text('Sí, dejar en 0'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.delete_sweep_outlined),
+              label: const Text('Reiniciar Todo en 0'),
             ),
           ],
         ),

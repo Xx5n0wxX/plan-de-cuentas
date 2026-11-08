@@ -7,11 +7,15 @@ import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
 import '../services/local_notification_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
+import '../widgets/quick_action_bottom_sheet.dart';
 import 'dashboard_view.dart';
+import 'debts_hub_view.dart';
 import 'erika_view.dart';
 import 'fiado_view.dart';
 import 'modular_views.dart';
+import 'plans_hub_view.dart';
 import 'settings_view.dart';
 import 'transactions_view.dart';
 
@@ -85,6 +89,15 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (routeId) {
       case 'dashboard':
         return DashboardView(onNavigateToModule: _navigateToRoute);
+      case 'debts_hub':
+        return DebtsHubView(onOpenModule: _navigateToRoute);
+      case 'plans_hub':
+        return PlansHubView(onOpenModule: _navigateToRoute);
+      case 'modules_hub':
+        return ModulesHubView(onOpenModule: _navigateToRoute);
+      case 'settings':
+        return const SettingsView();
+      // Módulos específicos para navegación directa
       case AppModuleId.monthlyFlow:
         return const TransactionsView();
       case AppModuleId.loans:
@@ -105,10 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return const CreditCardsModuleView();
       case AppModuleId.shoppingList:
         return const ShoppingListModuleView();
-      case 'modules_hub':
-        return ModulesHubView(onOpenModule: _navigateToRoute);
-      case 'settings':
-        return const SettingsView();
       default:
         return DashboardView(onNavigateToModule: _navigateToRoute);
     }
@@ -127,19 +136,17 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Construir lista de rutas activas para escritorio
-    final activeModuleMetas = AppModuleMeta.catalog
-        .where((m) => provider.isModuleActive(m.id))
-        .toList();
-
+    // Rutas base para escritorio
     final desktopRoutes = <String>[
       'dashboard',
-      ...activeModuleMetas.map((m) => m.id),
+      'debts_hub',
+      'plans_hub',
       'modules_hub',
       'settings',
     ];
 
-    if (!desktopRoutes.contains(_selectedRoute)) {
+    if (!desktopRoutes.contains(_selectedRoute) &&
+        !AppModuleMeta.catalog.any((m) => m.id == _selectedRoute)) {
       _selectedRoute = 'dashboard';
     }
 
@@ -187,16 +194,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         selectedIcon: Icon(Icons.dashboard),
                         label: Text('Inicio'),
                       ),
-                      ...activeModuleMetas.map(
-                        (m) => NavigationRailDestination(
-                          icon: Icon(m.icon),
-                          selectedIcon: Icon(m.selectedIcon),
-                          label: Text(m.shortLabel),
-                        ),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.account_balance_outlined),
+                        selectedIcon: Icon(Icons.account_balance),
+                        label: Text('Compromisos'),
+                      ),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.savings_outlined),
+                        selectedIcon: Icon(Icons.savings),
+                        label: Text('Metas'),
                       ),
                       NavigationRailDestination(
                         icon: Badge(
-                          label: Text('${activeModuleMetas.length}'),
+                          label: Text('${provider.activeModules.length + 1}'),
                           child: const Icon(Icons.widgets_outlined),
                         ),
                         selectedIcon: const Icon(Icons.widgets),
@@ -221,62 +231,65 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // DISEÑO MÓVIL: Barra inferior compacta con acceso a Inicio, Movimientos, Módulos y Ajustes
+    // DISEÑO MÓVIL: 4 Pestañas Principales + Botón Flotante Central (+)
     final mobilePrimaryRoutes = <String>[
       'dashboard',
-      AppModuleId.monthlyFlow,
-      if (provider.isModuleActive(AppModuleId.openAccounts))
-        AppModuleId.openAccounts
-      else if (provider.isModuleActive(AppModuleId.loans))
-        AppModuleId.loans,
-      'modules_hub',
+      'debts_hub',
+      'plans_hub',
       'settings',
     ];
 
     int mobileIndex = mobilePrimaryRoutes.indexOf(_selectedRoute);
     if (mobileIndex == -1) {
-      // Si está viendo un módulo abierto desde el hub de Módulos, resaltar "Módulos"
-      mobileIndex = mobilePrimaryRoutes.indexOf('modules_hub');
+      if (_selectedRoute == 'modules_hub') {
+        mobileIndex = 3; // Ajustes / Más
+      } else if (_selectedRoute == AppModuleId.loans ||
+          _selectedRoute == AppModuleId.openAccounts ||
+          _selectedRoute == AppModuleId.creditCards ||
+          _selectedRoute == AppModuleId.receivables) {
+        mobileIndex = 1; // Compromisos
+      } else if (_selectedRoute == AppModuleId.savingsGoals ||
+          _selectedRoute == AppModuleId.sharedExpenses ||
+          _selectedRoute == AppModuleId.subscriptions) {
+        mobileIndex = 2; // Metas
+      } else {
+        mobileIndex = 0; // Inicio
+      }
     }
 
     return Scaffold(
       body: _buildScreenForRoute(_selectedRoute),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => QuickActionBottomSheet.show(
+          context,
+          onNavigate: _navigateToRoute,
+        ),
+        backgroundColor: AppTheme.primaryTeal,
+        foregroundColor: Colors.white,
+        tooltip: 'Acciones Rápidas (+)',
+        child: const Icon(Icons.add, size: 28),
+      ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: mobileIndex < 0 ? 0 : mobileIndex,
+        selectedIndex: mobileIndex,
         onDestinationSelected: (idx) =>
             _navigateToRoute(mobilePrimaryRoutes[idx]),
-        destinations: [
-          const NavigationDestination(
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Inicio',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Movimientos',
-          ),
-          if (mobilePrimaryRoutes.contains(AppModuleId.openAccounts))
-            const NavigationDestination(
-              icon: Icon(Icons.storefront_outlined),
-              selectedIcon: Icon(Icons.storefront),
-              label: 'Libretas',
-            )
-          else if (mobilePrimaryRoutes.contains(AppModuleId.loans))
-            const NavigationDestination(
-              icon: Icon(Icons.handshake_outlined),
-              selectedIcon: Icon(Icons.handshake),
-              label: 'Préstamos',
-            ),
           NavigationDestination(
-            icon: Badge(
-              label: Text('${activeModuleMetas.length}'),
-              child: const Icon(Icons.widgets_outlined),
-            ),
-            selectedIcon: const Icon(Icons.widgets),
-            label: 'Módulos',
+            icon: Icon(Icons.account_balance_outlined),
+            selectedIcon: Icon(Icons.account_balance),
+            label: 'Compromisos',
           ),
-          const NavigationDestination(
+          NavigationDestination(
+            icon: Icon(Icons.savings_outlined),
+            selectedIcon: Icon(Icons.savings),
+            label: 'Metas',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: 'Ajustes',

@@ -65,7 +65,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Now Home Screen appears in clean zero state
-    expect(find.text('Ingresos del Mes'), findsOneWidget);
-    expect(find.text('Tus Módulos Activos'), findsOneWidget);
+    expect(find.text('Saldo Disponible Real'), findsOneWidget);
+    expect(find.text('Compromisos y Deudas'), findsWidgets);
   });
 }

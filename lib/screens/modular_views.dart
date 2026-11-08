@@ -11,16 +11,26 @@ import '../widgets/add_transaction_dialog.dart';
 import '../widgets/export_options_dialog.dart';
 
 /// Centro de Módulos (Permite activar/desactivar los 10 módulos o abrir cualquiera)
-class ModulesHubView extends StatelessWidget {
+class ModulesHubView extends StatefulWidget {
   final ValueChanged<String>? onOpenModule;
 
   const ModulesHubView({super.key, this.onOpenModule});
+
+  @override
+  State<ModulesHubView> createState() => _ModulesHubViewState();
+}
+
+class _ModulesHubViewState extends State<ModulesHubView> {
+  // 0: Todos, 1: Flujo Diario, 2: Deudas y Cobros, 3: Metas y Planes
+  int _categoryFilter = 0;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
     final theme = Theme.of(context);
     final isDesktop = MediaQuery.of(context).size.width >= 800;
+    final activeCount = provider.activeModules.length + 1; // +1 por Flujo Mensual base
+    final progress = (activeCount / 10).clamp(0.0, 1.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -51,48 +61,86 @@ class ModulesHubView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // TARJETA DE PERFILES RÁPIDOS DE 1 CLIC
+            // TARJETA SUPERIOR DE RESUMEN Y PERFILES RÁPIDOS
             Card(
               elevation: 0,
               color: theme.colorScheme.surfaceContainerHighest,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(20)),
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.auto_awesome,
-                            color: AppTheme.primaryTeal),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Perfiles Rápidos de 1 Clic',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.widgets,
+                                  color: AppTheme.primaryTeal, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '$activeCount de 10 módulos activos (${(progress * 100).toInt()}%)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            activeCount == 10 ? 'Plan Completo 🚀' : 'Personalizado',
+                            style: const TextStyle(
+                              color: AppTheme.primaryTeal,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: theme.dividerColor.withValues(alpha: 0.2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryTeal),
+                        minHeight: 8,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'Elige una combinación preconfigurada o activa manualmente abajo los módulos que necesites.',
+                      'Perfiles de Configuración en 1 Clic:',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
                         ActionChip(
-                          avatar: const Icon(Icons.bolt, size: 16),
-                          label: const Text('Control Básico'),
+                          avatar: const Icon(Icons.bolt, size: 15),
+                          label: const Text('Básico'),
                           onPressed: () {
                             provider.applyModulePreset([
                               AppModuleId.dailyBudget,
@@ -102,18 +150,7 @@ class ModulesHubView extends StatelessWidget {
                           },
                         ),
                         ActionChip(
-                          avatar: const Icon(Icons.storefront, size: 16),
-                          label: const Text('Comercio y Cuotas'),
-                          onPressed: () {
-                            provider.applyModulePreset([
-                              AppModuleId.loans,
-                              AppModuleId.openAccounts,
-                              AppModuleId.receivables,
-                            ]);
-                          },
-                        ),
-                        ActionChip(
-                          avatar: const Icon(Icons.home_outlined, size: 16),
+                          avatar: const Icon(Icons.home_outlined, size: 15),
                           label: const Text('Hogar / Pareja'),
                           onPressed: () {
                             provider.applyModulePreset([
@@ -125,8 +162,19 @@ class ModulesHubView extends StatelessWidget {
                           },
                         ),
                         ActionChip(
-                          avatar: const Icon(Icons.rocket_launch, size: 16),
-                          label: const Text('Modo Completo (10 Módulos)'),
+                          avatar: const Icon(Icons.storefront, size: 15),
+                          label: const Text('Comercio / Deudas'),
+                          onPressed: () {
+                            provider.applyModulePreset([
+                              AppModuleId.loans,
+                              AppModuleId.openAccounts,
+                              AppModuleId.receivables,
+                            ]);
+                          },
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.rocket_launch, size: 15),
+                          label: const Text('Todo Activo'),
                           onPressed: () {
                             provider.applyModulePreset(AppModuleId.allOptional);
                           },
@@ -137,91 +185,198 @@ class ModulesHubView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 18),
 
-            Text(
-              'Los 10 Módulos Disponibles (${provider.activeModules.length + 1}/10 activos)',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // FILTRO DE CATEGORÍAS EN PÍLDORAS
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip(0, 'Todos (10)', Icons.apps),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(1, 'Flujo Diario', Icons.trending_up),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(2, 'Deudas y Cobros', Icons.account_balance),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(3, 'Planes y Futuro', Icons.savings),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
 
-            ...AppModuleMeta.catalog.map((meta) {
-              final active = provider.isModuleActive(meta.id);
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(
-                    color: active
-                        ? meta.accentColor.withValues(alpha: 0.45)
-                        : Colors.transparent,
-                    width: 1.2,
-                  ),
-                ),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  leading: CircleAvatar(
-                    backgroundColor: meta.accentColor.withValues(alpha: 0.15),
-                    child: Icon(meta.selectedIcon,
-                        color: meta.accentColor, size: 22),
-                  ),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          meta.title,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                      ),
-                      if (meta.isCore)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryTeal.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'Base',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryTeal,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(meta.subtitle,
-                        style: const TextStyle(fontSize: 12)),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (active && onOpenModule != null)
-                        TextButton(
-                          onPressed: () => onOpenModule!(meta.id),
-                          child: const Text('Abrir'),
-                        ),
-                      if (!meta.isCore)
-                        Switch(
-                          value: active,
-                          activeTrackColor: meta.accentColor,
-                          onChanged: (val) =>
-                              provider.toggleModule(meta.id, val),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+            // GRUPOS CATEGORIZADOS DE MÓDULOS
+            if (_categoryFilter == 0 || _categoryFilter == 1) ...[
+              _buildCategorySection(
+                title: 'Flujo y Gestión Diaria',
+                icon: Icons.payments_outlined,
+                color: Colors.teal,
+                modules: [
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.monthlyFlow),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.dailyBudget),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.shoppingList),
+                ],
+                provider: provider,
+                theme: theme,
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            if (_categoryFilter == 0 || _categoryFilter == 2) ...[
+              _buildCategorySection(
+                title: 'Deudas, Créditos y Cobros',
+                icon: Icons.account_balance_outlined,
+                color: Colors.indigo,
+                modules: [
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.loans),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.openAccounts),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.creditCards),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.receivables),
+                ],
+                provider: provider,
+                theme: theme,
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            if (_categoryFilter == 0 || _categoryFilter == 3) ...[
+              _buildCategorySection(
+                title: 'Planes, Metas y Futuro',
+                icon: Icons.rocket_launch_outlined,
+                color: Colors.purple,
+                modules: [
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.savingsGoals),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.sharedExpenses),
+                  AppModuleMeta.catalog.firstWhere((m) => m.id == AppModuleId.subscriptions),
+                ],
+                provider: provider,
+                theme: theme,
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterChip(int index, String label, IconData icon) {
+    final isSelected = _categoryFilter == index;
+    return FilterChip(
+      selected: isSelected,
+      avatar: Icon(icon, size: 16, color: isSelected ? Colors.white : null),
+      label: Text(label),
+      onSelected: (_) => setState(() => _categoryFilter = index),
+      selectedColor: AppTheme.primaryTeal,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : null,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _buildCategorySection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<AppModuleMeta> modules,
+    required FinanceProvider provider,
+    required ThemeData theme,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ...modules.map((meta) {
+          final active = provider.isModuleActive(meta.id);
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: active
+                    ? meta.accentColor.withValues(alpha: 0.45)
+                    : theme.dividerColor.withValues(alpha: 0.2),
+                width: 1.2,
+              ),
+            ),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: CircleAvatar(
+                backgroundColor: meta.accentColor.withValues(alpha: 0.15),
+                child: Icon(meta.selectedIcon,
+                    color: meta.accentColor, size: 22),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      meta.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  ),
+                  if (meta.isCore)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Base',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryTeal,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(meta.subtitle,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (active && widget.onOpenModule != null)
+                    TextButton(
+                      onPressed: () => widget.onOpenModule!(meta.id),
+                      child: const Text('Abrir'),
+                    ),
+                  if (!meta.isCore)
+                    Switch(
+                      value: active,
+                      activeTrackColor: meta.accentColor,
+                      onChanged: (val) =>
+                          provider.toggleModule(meta.id, val),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

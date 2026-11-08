@@ -289,6 +289,8 @@ class FinanceProvider extends ChangeNotifier {
   // --- MODO PRIVACIDAD (OCULTAR SALDOS EN PÚBLICO) ---
   bool _isPrivacyMode = false;
   bool get isPrivacyMode => _isPrivacyMode;
+  String maskedCurrency(num amount) =>
+      CurrencyFormatter.format(amount.toDouble());
 
   Future<void> togglePrivacyMode() async {
     _isPrivacyMode = !_isPrivacyMode;
