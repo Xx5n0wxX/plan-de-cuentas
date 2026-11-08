@@ -12,6 +12,7 @@ import '../models/shared_config_model.dart';
 import '../models/transaction_model.dart';
 import '../services/firebase_sync_service.dart';
 import '../services/google_drive_backup_service.dart';
+import '../services/google_sheets_export_service.dart';
 import '../utils/currency_formatter.dart';
 
 class FinanceProvider extends ChangeNotifier {
@@ -572,6 +573,17 @@ class FinanceProvider extends ChangeNotifier {
       notifyListeners();
     }
     return meta;
+  }
+
+  Future<GoogleSheetExportResult> exportToGoogleSheets({
+    required String accessToken,
+    String? customTitle,
+  }) async {
+    return GoogleSheetsExportService.instance.exportToGoogleSheets(
+      provider: this,
+      accessToken: accessToken,
+      customTitle: customTitle,
+    );
   }
 
   Future<void> restoreFromGoogleDrive({

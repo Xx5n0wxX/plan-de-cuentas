@@ -11,6 +11,7 @@ import '../services/firebase_sync_service.dart';
 import '../services/local_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
+import '../widgets/export_options_dialog.dart';
 import '../widgets/qr_scanner_dialog.dart';
 
 class SettingsView extends StatefulWidget {
@@ -62,7 +63,48 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  bool _isExportingSheets = false;
   bool _isExportingExcel = false;
+
+  Future<void> _handleExportGoogleSheets(
+      BuildContext context, FinanceProvider provider) async {
+    final auth = context.read<AuthProvider>();
+    setState(() => _isExportingSheets = true);
+    try {
+      final token = await auth.ensureGoogleDriveAccessToken();
+      if (token == null || token.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Conecta primero tu cuenta de Google en la sección de cuenta para exportar a Google Sheets.'),
+            ),
+          );
+        }
+        return;
+      }
+      final result = await provider.exportToGoogleSheets(accessToken: token);
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => GoogleSheetSuccessDialog(result: result),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al crear hoja de cálculo en Google Sheets: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExportingSheets = false);
+      }
+    }
+  }
 
   Future<void> _handleExportExcel(
       BuildContext context, FinanceProvider provider) async {
@@ -354,21 +396,21 @@ class _SettingsViewState extends State<SettingsView> {
             _buildGoogleDriveBackupCard(context, provider),
             const SizedBox(height: 28),
 
-            // 2.5 SECCIÓN: EXPORTACIÓN A EXCEL (.XLSX)
+            // 2.5 SECCIÓN: PLANILLAS Y EXPORTACIÓN
             const Text(
-              'Exportación y Reportes',
+              'Planillas y Exportación de Datos',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
-              'Descarga una planilla Excel profesional con todos tus módulos organizados en pestañas para respaldar, imprimir o auditar en PC.',
+              'Crea una hoja de cálculo en vivo en Google Sheets editable en línea o descarga un archivo Excel (.xlsx) estructurado.',
               style: TextStyle(
                 fontSize: 13,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
-            _buildExcelExportCard(context, provider),
+            _buildExportCard(context, provider),
             const SizedBox(height: 28),
 
             // 2.7 SECCIÓN: NOTIFICACIONES Y VENCIMIENTOS
@@ -1069,7 +1111,7 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildExcelExportCard(BuildContext context, FinanceProvider provider) {
+  Widget _buildExportCard(BuildContext context, FinanceProvider provider) {
     final theme = Theme.of(context);
 
     return Card(
@@ -1086,25 +1128,47 @@ class _SettingsViewState extends State<SettingsView> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF107C41).withValues(alpha: 0.15),
+                    color: const Color(0xFF0F9D58).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.table_view_outlined,
-                      color: Color(0xFF107C41), size: 28),
+                  child: const Icon(Icons.table_chart,
+                      color: Color(0xFF0F9D58), size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Libro Excel Completo (.xlsx)',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Hoja de Cálculo y Excel',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F9D58),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              '11 Módulos',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '11 hojas ordenadas con métricas, cálculos numéricos y formato limpio.',
+                        'Genera una hoja online en Google Sheets o un archivo .xlsx local.',
                         style: TextStyle(
                             fontSize: 12,
                             color: theme.colorScheme.onSurfaceVariant),
@@ -1133,17 +1197,53 @@ class _SettingsViewState extends State<SettingsView> {
               ],
             ),
             const SizedBox(height: 16),
+            // BOTÓN PRINCIPAL: GOOGLE SHEETS
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF107C41),
+                  backgroundColor: const Color(0xFF0F9D58),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: _isExportingExcel
+                onPressed: (_isExportingSheets || _isExportingExcel)
+                    ? null
+                    : () => _handleExportGoogleSheets(context, provider),
+                icon: _isExportingSheets
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.table_chart, size: 20),
+                label: Text(
+                  _isExportingSheets
+                      ? 'Creando en Google Sheets...'
+                      : 'Crear en Google Sheets (En línea)',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // BOTÓN SECUNDARIO: EXCEL (.XLSX)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF107C41),
+                  side: const BorderSide(color: Color(0xFF107C41), width: 1.5),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: (_isExportingSheets || _isExportingExcel)
                     ? null
                     : () => _handleExportExcel(context, provider),
                 icon: _isExportingExcel
@@ -1152,16 +1252,17 @@ class _SettingsViewState extends State<SettingsView> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFF107C41)),
                         ),
                       )
                     : const Icon(Icons.file_download_outlined, size: 20),
                 label: Text(
                   _isExportingExcel
-                      ? 'Generando Planilla Excel...'
-                      : 'Generar y Exportar Excel (.xlsx)',
+                      ? 'Generando Archivo Excel...'
+                      : 'Descargar Archivo Excel (.xlsx)',
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
+                      fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ),

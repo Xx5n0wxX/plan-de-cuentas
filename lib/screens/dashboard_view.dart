@@ -8,12 +8,12 @@ import '../models/erika_loan_model.dart';
 import '../models/modular_models.dart';
 import '../models/transaction_model.dart';
 import '../providers/finance_provider.dart';
-import '../services/excel_export_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_fiado_dialog.dart';
 import '../widgets/add_transaction_dialog.dart';
 import '../widgets/erika_payment_success_dialog.dart';
+import '../widgets/export_options_dialog.dart';
 import '../widgets/pay_fiado_dialog.dart';
 
 class DashboardView extends StatelessWidget {
@@ -122,41 +122,10 @@ class DashboardView extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         IconButton.filledTonal(
-                          icon: const Icon(Icons.table_view_outlined,
-                              color: Color(0xFF107C41)),
-                          tooltip: 'Exportar a Excel (.xlsx)',
-                          onPressed: () async {
-                            try {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Generando planilla Excel de todos los módulos...'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                              final path = await ExcelExportService
-                                  .exportFullWorkbook(provider);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        '✓ Planilla Excel generada ($path)'),
-                                    backgroundColor: const Color(0xFF107C41),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error al exportar: $e'),
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.error,
-                                  ),
-                                );
-                              }
-                            }
-                          },
+                          icon: const Icon(Icons.table_chart,
+                              color: Color(0xFF0F9D58)),
+                          tooltip: 'Exportar (Google Sheets / Excel)',
+                          onPressed: () => ExportOptionsSheet.show(context),
                         ),
                       ],
                     ),

@@ -74,6 +74,14 @@ class AuthProvider extends ChangeNotifier {
 
   /// Obtiene un token válido para Google Drive (solicitando login si es necesario)
   Future<String?> ensureGoogleDriveAccessToken() async {
+    final fresh = await _authService.getFreshAccessToken();
+    if (fresh != null && fresh.isNotEmpty) {
+      if (_user != null) {
+        _user = _user!.copyWith(accessToken: fresh);
+      }
+      return fresh;
+    }
+
     if (_user != null &&
         !_user!.isGuest &&
         _user!.accessToken != null &&

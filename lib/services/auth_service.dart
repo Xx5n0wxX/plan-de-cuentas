@@ -80,11 +80,15 @@ class AppUser {
 }
 
 class AuthService {
+  static const String driveFileScope =
+      'https://www.googleapis.com/auth/drive.file';
+
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
       'email',
       'profile',
       GoogleDriveBackupService.driveAppDataScope,
+      driveFileScope,
     ],
   );
 
@@ -107,6 +111,7 @@ class AuthService {
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
         googleProvider.addScope(GoogleDriveBackupService.driveAppDataScope);
+        googleProvider.addScope(driveFileScope);
         googleProvider.setCustomParameters({'prompt': 'select_account'});
 
         final UserCredential userCredential =
@@ -181,6 +186,7 @@ class AuthService {
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
         googleProvider.addScope(GoogleDriveBackupService.driveAppDataScope);
+        googleProvider.addScope(driveFileScope);
         googleProvider.setCustomParameters({'prompt': 'select_account'});
 
         final UserCredential userCredential =
@@ -240,6 +246,21 @@ class AuthService {
     );
     await _persistUser(linkedUser);
     return linkedUser;
+  }
+
+  /// Obtiene o refresca el token de acceso de Google de forma silenciosa si es posible
+  Future<String?> getFreshAccessToken() async {
+    try {
+      if (!kIsWeb) {
+        GoogleSignInAccount? account = _googleSignIn.currentUser;
+        account ??= await _googleSignIn.signInSilently();
+        if (account != null) {
+          final auth = await account.authentication;
+          return auth.accessToken;
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Cerrar sesión o desvincular dispositivo

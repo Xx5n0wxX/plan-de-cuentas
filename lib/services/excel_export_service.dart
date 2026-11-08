@@ -25,10 +25,10 @@ class ExcelExportService {
     backgroundColorHex: ExcelColor.fromHexString('#F1F5F9'),
   );
 
-  /// Genera y comparte el archivo Excel completo ordenado por pestañas/módulos
-  static Future<String> exportFullWorkbook(FinanceProvider provider) async {
+  /// Construye el documento Excel completo con los 11 módulos en sus respectivas hojas
+  static Excel buildExcelDocument(FinanceProvider provider) {
     try {
-      await initializeDateFormatting('es_CL', null);
+      initializeDateFormatting('es_CL', null);
     } catch (_) {}
 
     final excel = Excel.createExcel();
@@ -48,6 +48,12 @@ class ExcelExportService {
     _buildCreditCardsSheet(excel['Tarjetas de Crédito'], provider);
     _buildShoppingListSheet(excel['Lista de Compras'], provider);
 
+    return excel;
+  }
+
+  /// Genera y comparte el archivo Excel completo ordenado por pestañas/módulos
+  static Future<String> exportFullWorkbook(FinanceProvider provider) async {
+    final excel = buildExcelDocument(provider);
     final bytes = excel.save();
     if (bytes == null || bytes.isEmpty) {
       throw Exception('No se pudieron generar los datos del libro Excel');

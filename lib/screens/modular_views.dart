@@ -5,10 +5,10 @@ import 'package:provider/provider.dart';
 import '../models/modular_models.dart';
 import '../models/transaction_model.dart';
 import '../providers/finance_provider.dart';
-import '../services/excel_export_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_transaction_dialog.dart';
+import '../widgets/export_options_dialog.dart';
 
 /// Centro de Módulos (Permite activar/desactivar los 10 módulos o abrir cualquiera)
 class ModulesHubView extends StatelessWidget {
@@ -27,36 +27,9 @@ class ModulesHubView extends StatelessWidget {
         title: const Text('Catálogo de Módulos (Arma tu Plan)'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -268,36 +241,9 @@ class SharedExpensesModuleView extends StatelessWidget {
         title: const Text('Gastos Compartidos'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -571,36 +517,9 @@ class ReceivablesModuleView extends StatelessWidget {
         title: const Text('Me Deben / Cuentas por Cobrar'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -1013,36 +932,9 @@ class SavingsGoalsModuleView extends StatelessWidget {
         title: const Text('Metas de Ahorro y Sobres'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -1464,36 +1356,9 @@ class SubscriptionsModuleView extends StatelessWidget {
         title: const Text('Suscripciones y Pagos Recurrentes'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -1909,36 +1774,9 @@ class DailyBudgetModuleView extends StatelessWidget {
         title: const Text('Gastos Hormiga y Presupuestos'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -2466,36 +2304,9 @@ class CreditCardsModuleView extends StatelessWidget {
         title: const Text('Tarjetas de Crédito y Facturación'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(
@@ -2962,36 +2773,9 @@ class ShoppingListModuleView extends StatelessWidget {
         title: const Text('Lista de Compras / Presupuesto'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
-            tooltip: 'Exportar a Excel (.xlsx)',
-            onPressed: () async {
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Generando planilla Excel de todos los módulos...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                final path = await ExcelExportService.exportFullWorkbook(provider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ Planilla Excel generada ($path)'),
-                      backgroundColor: const Color(0xFF107C41),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al exportar: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
+            icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
+            tooltip: 'Exportar Plan (Google Sheets / Excel)',
+            onPressed: () => ExportOptionsSheet.show(context),
           ),
           IconButton(
             icon: Icon(

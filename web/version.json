@@ -1,8 +1,8 @@
 {
-  "version": "2.4.1",
-  "buildNumber": 241,
+  "version": "2.4.2",
+  "buildNumber": 242,
   "forceUpdate": false,
-  "changelog": "• Corrección crítica de Biometría: Eliminado bucle infinito al verificar huella dactilar o Face ID.\n• Desbloqueo suave y sin rebloqueos al salir del diálogo del sistema Android.\n• Sesión activa preservada al habilitar la protección desde Ajustes.\n• Todas las 4 mejoras activas (Modo Privacidad, Deshacer, Exportador Excel y Notificaciones).",
+  "changelog": "• Nueva funcionalidad Google Sheets (En línea): Exporta tu plan financiero directamente a una hoja de cálculo viva en Google Drive con las 11 pestañas organizadas.\n• Botón directo 'Abrir en Google Sheets' para editar en navegador o celular.\n• Opciones de compartir enlace directo y copiar al portapapeles.\n• Descarga tradicional de archivo Excel (.xlsx) preservada como opción sin conexión.\n• Corrección de bucle biométrico y mejoras de estabilidad general.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }
