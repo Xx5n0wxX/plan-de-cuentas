@@ -3,6 +3,20 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot"
 $env:ANDROID_HOME = "C:\Users\diego\AppData\Local\Android\sdk"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 
+Write-Output "0/5 Verificando consistencia de versión y build..."
+$vJson = Get-Content "web\version.json" -Raw | ConvertFrom-Json
+$pubMatch = (Select-String -Path "pubspec.yaml" -Pattern "version:\s*([0-9\.]+)\+([0-9]+)").Matches[0]
+$pubVer = $pubMatch.Groups[1].Value
+$pubBuild = $pubMatch.Groups[2].Value
+
+$dartV = (Select-String -Path "lib\services\app_update_service.dart" -Pattern "currentVersion\s*=\s*'([^']+)'").Matches[0].Groups[1].Value
+$dartB = (Select-String -Path "lib\services\app_update_service.dart" -Pattern "currentBuildNumber\s*=\s*([0-9]+)").Matches[0].Groups[1].Value
+
+if ($vJson.version -ne $pubVer -or $vJson.version -ne $dartV -or [string]$vJson.buildNumber -ne $pubBuild -or [string]$vJson.buildNumber -ne $dartB) {
+    throw "ERROR: Versiones desalineadas! version.json=$($vJson.version)+$($vJson.buildNumber), pubspec=$pubVer+$pubBuild, app_update_service=$dartV+$dartB"
+}
+Write-Output "✓ Versiones verificadas y sincronizadas: $pubVer+$pubBuild"
+
 Write-Output "1/5 Compilando version Web/Cloud..."
 & "C:\src\flutter\bin\flutter.bat" build web --release
 Copy-Item "web\version.json" "build\web\version.json" -Force

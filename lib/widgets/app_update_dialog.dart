@@ -52,6 +52,10 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
           }
         },
       );
+      AppUpdateService.hasDismissedOrUpdatedInSession = true;
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -264,7 +268,10 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
             ),
             if (!widget.remote.forceUpdate)
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  AppUpdateService.hasDismissedOrUpdatedInSession = true;
+                  Navigator.pop(context);
+                },
                 child: const Text('Más tarde'),
               ),
           ],

@@ -36,13 +36,16 @@ class AppVersionInfo {
 }
 
 class AppUpdateService {
-  static const String currentVersion = '2.4.2';
-  static const int currentBuildNumber = 241;
+  static const String currentVersion = '2.4.3';
+  static const int currentBuildNumber = 243;
   static const String versionJsonUrl =
       'https://plan-de-cuentas-45670.web.app/version.json';
 
   static const MethodChannel _channel =
       MethodChannel('com.diegoplan.plan_de_cuentas/updater');
+
+  /// Evita que el modal de actualización vuelva a interrumpir en la misma sesión si el usuario ya lo descartó o instaló
+  static bool hasDismissedOrUpdatedInSession = false;
 
   static Future<AppVersionInfo?> checkRemoteVersion() async {
     try {
@@ -60,7 +63,25 @@ class AppUpdateService {
   }
 
   static bool isUpdateAvailable(AppVersionInfo remote) {
+    if (hasDismissedOrUpdatedInSession && !remote.forceUpdate) {
+      return false;
+    }
+    final cmp = compareVersions(remote.version, currentVersion);
+    if (cmp > 0) return true;
+    if (cmp < 0) return false;
     return remote.buildNumber > currentBuildNumber;
+  }
+
+  static int compareVersions(String v1, String v2) {
+    final p1 = v1.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final p2 = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final maxLen = p1.length > p2.length ? p1.length : p2.length;
+    for (int i = 0; i < maxLen; i++) {
+      final a = i < p1.length ? p1[i] : 0;
+      final b = i < p2.length ? p2[i] : 0;
+      if (a != b) return a.compareTo(b);
+    }
+    return 0;
   }
 
   static Future<void> launchUpdateDownload(AppVersionInfo remote) async {
