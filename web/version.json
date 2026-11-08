@@ -1,8 +1,8 @@
 {
-  "version": "2.4.4",
-  "buildNumber": 244,
+  "version": "2.4.5",
+  "buildNumber": 245,
   "forceUpdate": false,
-  "changelog": "• Autorización de Google Drive para Google Sheets: Flujo interactivo para conceder permisos de creación y guardado en Google Drive en línea.\n• Manejo inteligente de error 403 con diálogo de autorización en un solo toque.\n• Exportación completa a Google Sheets con las 11 pestañas organizadas.\n• Descarga local de archivo Excel (.xlsx) sin conexión.\n• Corrección de bucles de actualización y biometría.",
+  "changelog": "• Corrección del botón 'Abrir en Sheets': Lanzamiento nativo mediante Intent del sistema y permisos de visibilidad web en Android (<queries>).\n• Abre directamente la aplicación oficial de Google Sheets o tu navegador favorito.\n• Creación completa y en línea de hojas de cálculo con los 11 módulos financieros.\n• Descarga local en Excel (.xlsx) y estabilidad general.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

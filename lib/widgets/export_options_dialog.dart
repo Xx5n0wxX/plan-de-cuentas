@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
+import '../services/app_update_service.dart';
 import '../services/excel_export_service.dart';
 import '../services/google_sheets_export_service.dart';
 
@@ -637,10 +637,7 @@ class GoogleSheetSuccessDialog extends StatelessWidget {
             foregroundColor: Colors.white,
           ),
           onPressed: () async {
-            final uri = Uri.parse(result.webViewLink);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
+            await AppUpdateService.openExternalUrl(result.webViewLink);
           },
           icon: const Icon(Icons.open_in_new, size: 16),
           label: const Text('Abrir en Sheets'),
