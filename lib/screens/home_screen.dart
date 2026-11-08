@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'modules_hub':
         return ModulesHubView(onOpenModule: _navigateToRoute);
       case 'settings':
-        return const SettingsView();
+        return SettingsView(onNavigateToRoute: _navigateToRoute);
       // Módulos específicos para navegación directa
       case AppModuleId.monthlyFlow:
         return const TransactionsView();
@@ -231,19 +231,18 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // DISEÑO MÓVIL: 4 Pestañas Principales + Botón Flotante Central (+)
+    // DISEÑO MÓVIL: 5 Pestañas Principales + Botón Flotante Central (+)
     final mobilePrimaryRoutes = <String>[
       'dashboard',
       'debts_hub',
       'plans_hub',
+      'modules_hub',
       'settings',
     ];
 
     int mobileIndex = mobilePrimaryRoutes.indexOf(_selectedRoute);
     if (mobileIndex == -1) {
-      if (_selectedRoute == 'modules_hub') {
-        mobileIndex = 3; // Ajustes / Más
-      } else if (_selectedRoute == AppModuleId.loans ||
+      if (_selectedRoute == AppModuleId.loans ||
           _selectedRoute == AppModuleId.openAccounts ||
           _selectedRoute == AppModuleId.creditCards ||
           _selectedRoute == AppModuleId.receivables) {
@@ -252,6 +251,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _selectedRoute == AppModuleId.sharedExpenses ||
           _selectedRoute == AppModuleId.subscriptions) {
         mobileIndex = 2; // Metas
+      } else if (_selectedRoute == AppModuleId.monthlyFlow ||
+          _selectedRoute == AppModuleId.dailyBudget ||
+          _selectedRoute == AppModuleId.shoppingList) {
+        mobileIndex = 3; // Módulos
       } else {
         mobileIndex = 0; // Inicio
       }
@@ -273,23 +276,31 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: mobileIndex,
         onDestinationSelected: (idx) =>
             _navigateToRoute(mobilePrimaryRoutes[idx]),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Inicio',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.account_balance_outlined),
             selectedIcon: Icon(Icons.account_balance),
             label: 'Compromisos',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.savings_outlined),
             selectedIcon: Icon(Icons.savings),
             label: 'Metas',
           ),
           NavigationDestination(
+            icon: Badge(
+              label: Text('${provider.activeModules.length + 1}'),
+              child: const Icon(Icons.widgets_outlined),
+            ),
+            selectedIcon: const Icon(Icons.widgets),
+            label: 'Módulos',
+          ),
+          const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: 'Ajustes',

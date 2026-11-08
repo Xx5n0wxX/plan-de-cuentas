@@ -96,6 +96,12 @@ class DashboardView extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
+                          icon: const Icon(Icons.widgets_outlined,
+                              color: AppTheme.primaryTeal),
+                          tooltip: 'Catálogo de Módulos (Arma tu Plan)',
+                          onPressed: () => onNavigateToModule?.call('modules_hub'),
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.table_chart,
                               color: Color(0xFF0F9D58)),
                           tooltip: 'Exportar (Google Sheets / Excel)',
@@ -209,6 +215,18 @@ class DashboardView extends StatelessWidget {
                         color: Colors.purple,
                         badge: '${provider.savingsGoals.length} Meta(s)',
                         onTap: () => onNavigateToModule?.call('plans_hub'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
+                      child: _buildHubNavigationCard(
+                        title: 'Catálogo de Módulos',
+                        subtitle:
+                            'Personaliza tu plan activando o desactivando los 10 módulos de la app según tus necesidades.',
+                        icon: Icons.widgets_outlined,
+                        color: AppTheme.primaryTeal,
+                        badge: '${provider.activeModules.length + 1} Módulos Activos',
+                        onTap: () => onNavigateToModule?.call('modules_hub'),
                       ),
                     ),
                   ],

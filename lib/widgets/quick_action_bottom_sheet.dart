@@ -175,6 +175,23 @@ class QuickActionBottomSheet extends StatelessWidget {
                 }
               },
             ),
+            const SizedBox(height: 10),
+
+            _buildActionTile(
+              context: context,
+              icon: Icons.widgets_outlined,
+              color: AppTheme.primaryTeal,
+              iconBgColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
+              iconColor: AppTheme.primaryTeal,
+              title: 'Personalizar Módulos (Arma tu Plan)',
+              subtitle: 'Activa o desactiva los 10 módulos de la app',
+              onTap: () {
+                Navigator.pop(context);
+                if (onNavigate != null) {
+                  onNavigate!('modules_hub');
+                }
+              },
+            ),
           ],
         ),
       ),

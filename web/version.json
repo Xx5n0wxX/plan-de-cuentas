@@ -1,8 +1,8 @@
 {
-  "version": "2.5.0",
-  "buildNumber": 250,
+  "version": "2.5.1",
+  "buildNumber": 251,
   "forceUpdate": false,
-  "changelog": "• ¡Plan de Cuentas 3.0!: Nueva interfaz completamente rediseñada, ordenada e intuitiva.\n• Panel Ejecutivo de Inicio con Saldo Disponible Real y Carrusel de Vencimientos de la semana.\n• Hub de Compromisos y Deudas: Préstamos bancarios, libretas de fiados, tarjetas y cuentas por cobrar en un solo lugar.\n• Metas, Planes y Pareja: Ahorros con termómetros, división de gastos compartidos y suscripciones fijas.\n• Catálogo de Módulos agrupado por categorías y perfiles de 1 clic.\n• Pantalla de Ajustes agrupada con tarjeta de perfil, seguridad y nube sin saturación visual.\n• Botón Flotante Central (+) de Acciones Rápidas.",
+  "changelog": "• Acceso directo al Catálogo de Módulos (Arma tu Plan) desde la barra inferior móvil, Inicio, Ajustes y Acciones Rápidas (+).\n• ¡Plan de Cuentas 3.0!: Nueva interfaz completamente rediseñada, ordenada e intuitiva.\n• Panel Ejecutivo de Inicio con Saldo Disponible Real y Carrusel de Vencimientos de la semana.\n• Hub de Compromisos y Deudas: Préstamos bancarios, libretas de fiados, tarjetas y cuentas por cobrar en un solo lugar.\n• Metas, Planes y Pareja: Ahorros con termómetros, división de gastos compartidos y suscripciones fijas.\n• Catálogo de Módulos agrupado por categorías y perfiles de 1 clic.\n• Pantalla de Ajustes agrupada con tarjeta de perfil, seguridad y nube sin saturación visual.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

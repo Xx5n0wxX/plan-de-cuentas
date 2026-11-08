@@ -15,9 +15,12 @@ import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
 import '../widgets/export_options_dialog.dart';
 import '../widgets/qr_scanner_dialog.dart';
+import 'modular_views.dart';
 
 class SettingsView extends StatefulWidget {
-  const SettingsView({super.key});
+  final void Function(String route)? onNavigateToRoute;
+
+  const SettingsView({super.key, this.onNavigateToRoute});
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -453,7 +456,17 @@ class _SettingsViewState extends State<SettingsView> {
             _buildLinkedDevicesCard(context, provider),
             const SizedBox(height: 26),
 
-            // 2. SECCIÓN: SEGURIDAD Y PRIVACIDAD
+            // 2. SECCIÓN: CATÁLOGO DE MÓDULOS (ARMA TU PLAN)
+            _buildSettingsGroupHeader(
+              title: 'Catálogo de Módulos (Arma tu Plan)',
+              icon: Icons.widgets_outlined,
+              color: AppTheme.primaryTeal,
+            ),
+            const SizedBox(height: 10),
+            _buildModulesCatalogCard(context, provider),
+            const SizedBox(height: 26),
+
+            // 3. SECCIÓN: SEGURIDAD Y PRIVACIDAD
             _buildSettingsGroupHeader(
               title: 'Seguridad y Privacidad',
               icon: Icons.security,
@@ -1784,6 +1797,118 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModulesCatalogCard(
+      BuildContext context, FinanceProvider provider) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final activeCount = provider.activeModules.length + 1;
+    final totalCount = AppModuleMeta.catalog.length + 1;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.widgets_outlined,
+                    color: AppTheme.primaryTeal,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Personalizar Módulos Activos',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$activeCount / $totalCount activos',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryTeal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Activa o desactiva préstamos, libretas de fiado, tarjetas, metas y presupuestos.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  if (widget.onNavigateToRoute != null) {
+                    widget.onNavigateToRoute!('modules_hub');
+                  } else {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          appBar: AppBar(
+                            title: const Text('Catálogo de Módulos'),
+                          ),
+                          body: const ModulesHubView(),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Abrir Catálogo de Módulos (Arma tu Plan)'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryTeal,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
