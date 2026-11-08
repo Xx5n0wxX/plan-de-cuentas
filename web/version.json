@@ -1,8 +1,8 @@
 {
-  "version": "2.3.3",
-  "buildNumber": 233,
+  "version": "2.4.0",
+  "buildNumber": 240,
   "forceUpdate": false,
-  "changelog": "• ¡Prueba de actualización directa en 1 toque!: Comprobando la descarga interna y apertura automática del instalador de Android.\n• Selector entre actualización interna rápida y descarga manual en navegador.\n• Optimizaciones menores en la interfaz.",
+  "changelog": "• Modo Privacidad: Botón con ojo para ocultar/mostrar saldos ($ ••••••) en todas las pantallas.\n• Botón Deshacer (Undo): Opción para restaurar cualquier elemento eliminado accidentalmente.\n• Exportador a Excel (.xlsx): Planilla completa y estructurada con 11 pestañas para respaldo o auditoría.\n• Recordatorios y Notificaciones: Avisos locales de vencimiento de cuotas, tarjetas y suscripciones.\n• Bloqueo Biométrico y PIN: Protección con Huella dactilar / Face ID y PIN numérico de respaldo.",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

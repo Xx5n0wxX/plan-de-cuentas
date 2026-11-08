@@ -5,7 +5,10 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
+import '../services/biometric_service.dart';
+import '../services/excel_export_service.dart';
 import '../services/firebase_sync_service.dart';
+import '../services/local_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
 import '../widgets/qr_scanner_dialog.dart';
@@ -21,6 +24,7 @@ class _SettingsViewState extends State<SettingsView> {
   late bool _sharedEnabled;
   late TextEditingController _partnerNameCtrl;
   late double _myPercentage;
+  bool _notificationsEnabled = true;
 
   @override
   void initState() {
@@ -29,6 +33,11 @@ class _SettingsViewState extends State<SettingsView> {
     _sharedEnabled = config.isEnabled;
     _partnerNameCtrl = TextEditingController(text: config.partnerName);
     _myPercentage = config.myPercentage;
+    LocalNotificationService.instance
+        .isNotificationsEnabled()
+        .then((val) {
+      if (mounted) setState(() => _notificationsEnabled = val);
+    });
   }
 
   @override
@@ -51,6 +60,137 @@ class _SettingsViewState extends State<SettingsView> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('✓ Ajustes guardados correctamente')),
     );
+  }
+
+  bool _isExportingExcel = false;
+
+  Future<void> _handleExportExcel(
+      BuildContext context, FinanceProvider provider) async {
+    setState(() => _isExportingExcel = true);
+    try {
+      final path = await ExcelExportService.exportFullWorkbook(provider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '✓ Planilla Excel generada exitosamente ($path)',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF107C41),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al exportar planilla Excel: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExportingExcel = false);
+      }
+    }
+  }
+
+  Future<void> _toggleNotifications(
+      bool value, FinanceProvider provider) async {
+    if (value) {
+      final granted =
+          await LocalNotificationService.instance.requestPermissions();
+      if (!granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Por favor concede permisos de notificación en los ajustes de tu dispositivo.'),
+          ),
+        );
+      }
+    }
+    await LocalNotificationService.instance.setNotificationsEnabled(value);
+    setState(() => _notificationsEnabled = value);
+    final count = await LocalNotificationService.instance
+        .syncAndScheduleReminders(provider);
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(value
+              ? '✓ Notificaciones activadas ($count alertas programadas)'
+              : 'Notificaciones desactivadas'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleTestNotification() async {
+    final granted =
+        await LocalNotificationService.instance.requestPermissions();
+    if (!granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Por favor permite notificaciones para recibir alertas.'),
+        ),
+      );
+      return;
+    }
+
+    await LocalNotificationService.instance.showInstantNotification(
+      id: 9999,
+      title: '🔔 Notificación de Prueba: Plan de Cuentas',
+      body:
+          'Tus alertas de cuotas, suscripciones y tarjetas están configuradas y funcionando correctamente.',
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✓ Notificación de prueba enviada al dispositivo'),
+          backgroundColor: Color(0xFF0F766E),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleScheduleRemindersNow(FinanceProvider provider) async {
+    final granted =
+        await LocalNotificationService.instance.requestPermissions();
+    if (!granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor permite notificaciones en el sistema.'),
+        ),
+      );
+      return;
+    }
+
+    final count = await LocalNotificationService.instance
+        .syncAndScheduleReminders(provider);
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '✓ Se programaron $count recordatorios de vencimiento en tu teléfono'),
+          backgroundColor: const Color(0xFF0F766E),
+        ),
+      );
+    }
   }
 
   Future<void> _handleDriveBackupNow(BuildContext context) async {
@@ -165,6 +305,7 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
+    final bio = context.watch<BiometricService>();
     final isDesktop = MediaQuery.of(context).size.width >= 800;
 
     return Scaffold(
@@ -211,6 +352,57 @@ class _SettingsViewState extends State<SettingsView> {
             ),
             const SizedBox(height: 12),
             _buildGoogleDriveBackupCard(context, provider),
+            const SizedBox(height: 28),
+
+            // 2.5 SECCIÓN: EXPORTACIÓN A EXCEL (.XLSX)
+            const Text(
+              'Exportación y Reportes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Descarga una planilla Excel profesional con todos tus módulos organizados en pestañas para respaldar, imprimir o auditar en PC.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildExcelExportCard(context, provider),
+            const SizedBox(height: 28),
+
+            // 2.7 SECCIÓN: NOTIFICACIONES Y VENCIMIENTOS
+            const Text(
+              'Notificaciones y Recordatorios',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Recibe alertas automáticas en tu teléfono antes y el día en que vencen tus cuotas de créditos, suscripciones y tarjetas.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildNotificationsCard(context, provider),
+            const SizedBox(height: 28),
+
+            // 2.8 SECCIÓN: SEGURIDAD Y BLOQUEO BIOMÉTRICO
+            const Text(
+              'Seguridad y Bloqueo Biométrico',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Protege tus datos financieros requiriendo tu huella digital, Face ID o PIN al abrir la aplicación.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildBiometricCard(context, bio),
             const SizedBox(height: 28),
 
             // 3. SECCIÓN: PERFIL Y CUENTA DE GOOGLE
@@ -374,6 +566,28 @@ class _SettingsViewState extends State<SettingsView> {
                           provider.setThemeMode(newSelection.first);
                         },
                       ),
+                    ),
+                    const Divider(height: 28),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Modo Privacidad (Ocultar Saldos)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      subtitle: const Text(
+                        'Oculta los montos y balances con "\$ ••••••" en todas las vistas de la aplicación.',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      secondary: Icon(
+                        provider.isPrivacyMode
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: provider.isPrivacyMode
+                            ? Colors.amber.shade700
+                            : null,
+                      ),
+                      value: provider.isPrivacyMode,
+                      onChanged: (_) => provider.togglePrivacyMode(),
                     ),
                   ],
                 ),
@@ -855,6 +1069,593 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  Widget _buildExcelExportCard(BuildContext context, FinanceProvider provider) {
+    final theme = Theme.of(context);
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF107C41).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.table_view_outlined,
+                      color: Color(0xFF107C41), size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Libro Excel Completo (.xlsx)',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '11 hojas ordenadas con métricas, cálculos numéricos y formato limpio.',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _ExcelFeatureChip(label: 'Resumen General'),
+                _ExcelFeatureChip(label: 'Movimientos'),
+                _ExcelFeatureChip(label: 'Libretas'),
+                _ExcelFeatureChip(label: 'Préstamos'),
+                _ExcelFeatureChip(label: 'Gastos Compartidos'),
+                _ExcelFeatureChip(label: 'Cuentas por Cobrar'),
+                _ExcelFeatureChip(label: 'Ahorros'),
+                _ExcelFeatureChip(label: 'Suscripciones'),
+                _ExcelFeatureChip(label: 'Presupuestos'),
+                _ExcelFeatureChip(label: 'Tarjetas'),
+                _ExcelFeatureChip(label: 'Lista de Compras'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF107C41),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isExportingExcel
+                    ? null
+                    : () => _handleExportExcel(context, provider),
+                icon: _isExportingExcel
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.file_download_outlined, size: 20),
+                label: Text(
+                  _isExportingExcel
+                      ? 'Generando Planilla Excel...'
+                      : 'Generar y Exportar Excel (.xlsx)',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationsCard(
+      BuildContext context, FinanceProvider provider) {
+    final theme = Theme.of(context);
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Activar Recordatorios de Vencimientos',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              subtitle: const Text(
+                'Recibe notificaciones automáticas para cuotas de créditos, cobro de suscripciones y facturación de tarjetas.',
+                style: TextStyle(fontSize: 12),
+              ),
+              secondary: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade700.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _notificationsEnabled
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_off_outlined,
+                  color: Colors.amber.shade800,
+                ),
+              ),
+              value: _notificationsEnabled,
+              onChanged: (val) => _toggleNotifications(val, provider),
+            ),
+            const Divider(height: 24),
+            const Text(
+              'Alertas que recibirás en tu teléfono:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            _buildNotificationFeatureItem(
+              theme: theme,
+              icon: Icons.handshake_outlined,
+              color: const Color(0xFF7C3AED),
+              title: 'Préstamos y Créditos',
+              desc:
+                  'Alerta el día de vencimiento y 1 día antes con monto y cuota.',
+            ),
+            const SizedBox(height: 6),
+            _buildNotificationFeatureItem(
+              theme: theme,
+              icon: Icons.autorenew_outlined,
+              color: const Color(0xFFEC4899),
+              title: 'Suscripciones y Membresías',
+              desc: 'Recordatorio el día del cobro mensual recurrente.',
+            ),
+            const SizedBox(height: 6),
+            _buildNotificationFeatureItem(
+              theme: theme,
+              icon: Icons.credit_card_outlined,
+              color: const Color(0xFF4F46E5),
+              title: 'Tarjetas de Crédito',
+              desc: 'Aviso en la fecha de corte y en el día límite de pago.',
+            ),
+            const SizedBox(height: 6),
+            _buildNotificationFeatureItem(
+              theme: theme,
+              icon: Icons.call_received_outlined,
+              color: const Color(0xFF059669),
+              title: 'Cuentas por Cobrar',
+              desc:
+                  'Notificación cuando se cumple el plazo acordado con un deudor.',
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _notificationsEnabled
+                      ? () => _handleScheduleRemindersNow(provider)
+                      : null,
+                  icon: const Icon(Icons.sync, size: 18),
+                  label: const Text('Programar Alertas Ahora'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _handleTestNotification,
+                  icon: const Icon(Icons.notification_important_outlined,
+                      size: 18),
+                  label: const Text('Probar Notificación'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationFeatureItem({
+    required ThemeData theme,
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String desc,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              children: [
+                TextSpan(
+                  text: '$title: ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                TextSpan(text: desc),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _toggleBiometricLock(bool enable, BiometricService bio) async {
+    if (enable) {
+      if (!bio.hasBiometricHardware && !bio.hasCustomPin) {
+        final pinSet = await _showSetPinDialog(context, bio);
+        if (!pinSet) return;
+      } else if (bio.hasBiometricHardware) {
+        final ok = await bio.authenticate(
+          reason: 'Confirma tu huella o biometría para activar la protección',
+        );
+        if (!ok) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No se pudo verificar la identidad biométrica.'),
+              ),
+            );
+          }
+          return;
+        }
+      }
+      await bio.setLockEnabled(true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Bloqueo de seguridad activado'),
+            backgroundColor: Color(0xFF0F766E),
+          ),
+        );
+      }
+    } else {
+      bool verified = false;
+      if (bio.hasBiometricHardware) {
+        verified = await bio.authenticate(
+          reason: 'Confirma tu identidad para desactivar el bloqueo',
+        );
+      } else if (bio.hasCustomPin) {
+        verified = await _promptPinConfirmation(context, bio);
+      } else {
+        verified = true;
+      }
+
+      if (verified) {
+        await bio.setLockEnabled(false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Bloqueo de seguridad desactivado')),
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo desactivar: identidad no verificada.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool> _showSetPinDialog(
+      BuildContext context, BiometricService bio) async {
+    final pinCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    String? errorText;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(bio.hasCustomPin
+              ? 'Modificar PIN de Respaldo'
+              : 'Configurar PIN de Respaldo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Ingresa un PIN numérico de 4 a 6 dígitos para desbloquear la app si tu huella o cámara fallan.',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: pinCtrl,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                decoration: InputDecoration(
+                  labelText: 'Nuevo PIN',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: confirmCtrl,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                decoration: InputDecoration(
+                  labelText: 'Confirmar PIN',
+                  errorText: errorText,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            if (bio.hasCustomPin)
+              TextButton(
+                onPressed: () async {
+                  await bio.setCustomPin(null);
+                  if (ctx.mounted) Navigator.pop(ctx, true);
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                child: const Text('Eliminar PIN'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final p = pinCtrl.text.trim();
+                final c = confirmCtrl.text.trim();
+                if (p.length < 4) {
+                  setDialogState(() {
+                    errorText = 'El PIN debe tener al menos 4 dígitos';
+                  });
+                  return;
+                }
+                if (p != c) {
+                  setDialogState(() {
+                    errorText = 'Los PIN ingresados no coinciden';
+                  });
+                  return;
+                }
+                await bio.setCustomPin(p);
+                if (ctx.mounted) Navigator.pop(ctx, true);
+              },
+              child: const Text('Guardar PIN'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  Future<bool> _promptPinConfirmation(
+      BuildContext context, BiometricService bio) async {
+    final pinCtrl = TextEditingController();
+    String? errorText;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Confirmar PIN de Seguridad'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Ingresa tu PIN actual para confirmar la acción:'),
+              const SizedBox(height: 14),
+              TextField(
+                controller: pinCtrl,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'PIN de seguridad',
+                  errorText: errorText,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (bio.verifyCustomPin(pinCtrl.text.trim())) {
+                  Navigator.pop(ctx, true);
+                } else {
+                  setDialogState(() {
+                    errorText = 'PIN incorrecto';
+                  });
+                }
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  Widget _buildBiometricCard(BuildContext context, BiometricService bio) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Bloqueo con Huella / Biometría',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              subtitle: Text(
+                bio.hasBiometricHardware
+                    ? 'Requiere ${bio.biometricTypeDescription} para abrir la aplicación y consultar tus saldos.'
+                    : 'Protege la aplicación usando un PIN numérico de seguridad.',
+                style: const TextStyle(fontSize: 12),
+              ),
+              secondary: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (isDark
+                          ? AppTheme.primaryTealDark
+                          : AppTheme.primaryTeal)
+                      .withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.fingerprint,
+                  color: isDark
+                      ? AppTheme.primaryTealDark
+                      : AppTheme.primaryTeal,
+                ),
+              ),
+              value: bio.isLockEnabled,
+              onChanged: (val) => _toggleBiometricLock(val, bio),
+            ),
+            const Divider(height: 24),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Bloquear al cambiar o salir de la app',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              subtitle: const Text(
+                'Si minimizas la app o cambias a otra tarea, volverá a solicitar autenticación de inmediato.',
+                style: TextStyle(fontSize: 12),
+              ),
+              secondary: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.phonelink_lock,
+                  color: Colors.blueGrey,
+                ),
+              ),
+              value: bio.lockOnBackground,
+              onChanged: bio.isLockEnabled
+                  ? (val) => bio.setLockOnBackground(val)
+                  : null,
+            ),
+            const Divider(height: 24),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.pin_outlined,
+                  color: Colors.indigo,
+                ),
+              ),
+              title: Text(
+                bio.hasCustomPin
+                    ? 'PIN de respaldo configurado (••••)'
+                    : 'PIN de respaldo alternativo',
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              subtitle: const Text(
+                'Desbloquea la aplicación con 4 dígitos si el sensor de huellas no responde.',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: OutlinedButton(
+                onPressed: () => _showSetPinDialog(context, bio),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(bio.hasCustomPin ? 'Modificar' : 'Crear PIN'),
+              ),
+            ),
+            if (bio.isLockEnabled) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    bio.lockApp();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('App bloqueada por seguridad'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.lock_outline, size: 18),
+                  label: const Text('Probar Bloqueo Ahora'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileCard(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final theme = Theme.of(context);
@@ -982,6 +1783,30 @@ class _SettingsViewState extends State<SettingsView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExcelFeatureChip extends StatelessWidget {
+  final String label;
+
+  const _ExcelFeatureChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
       ),
     );
   }

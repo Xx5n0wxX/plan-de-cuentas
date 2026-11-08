@@ -9,11 +9,24 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/finance_provider.dart';
 import 'screens/auth_wrapper.dart';
+import 'services/biometric_service.dart';
+import 'services/local_notification_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_CL', null);
+  try {
+    await LocalNotificationService.instance.init();
+  } catch (e) {
+    debugPrint('Local notifications init notice: $e');
+  }
+
+  try {
+    await BiometricService.instance.init();
+  } catch (e) {
+    debugPrint('Biometric init notice: $e');
+  }
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await SystemChrome.setEnabledSystemUIMode(
@@ -44,6 +57,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => FinanceProvider()),
+        ChangeNotifierProvider.value(value: BiometricService.instance),
       ],
       child: const PlanDeCuentasApp(),
     ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/modular_models.dart';
 import '../models/transaction_model.dart';
 import '../providers/finance_provider.dart';
+import '../services/excel_export_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_transaction_dialog.dart';
@@ -24,6 +25,50 @@ class ModulesHubView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Catálogo de Módulos (Arma tu Plan)'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
@@ -223,6 +268,48 @@ class SharedExpensesModuleView extends StatelessWidget {
         title: const Text('Gastos Compartidos'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+          IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Configurar porcentajes',
             onPressed: () => _showSharedSettingsDialog(context, provider),
@@ -331,7 +418,48 @@ class SharedExpensesModuleView extends StatelessWidget {
                         'Total: ${CurrencyFormatter.format(tx.amount)} • Parte ${cfg.partnerName}: ${CurrencyFormatter.format(partnerPart)}'),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
-                      onPressed: () => provider.deleteTransaction(tx.id),
+                      tooltip: 'Eliminar gasto compartido',
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Eliminar Gasto Compartido'),
+                            content: Text('¿Deseas eliminar "${tx.title}"?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.redAccent),
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Eliminar'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          final deleted = tx;
+                          final deletedIdx = provider.transactions.indexOf(tx);
+                          provider.deleteTransaction(tx.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Gasto "${deleted.title}" eliminado'),
+                                duration: const Duration(seconds: 4),
+                                action: SnackBarAction(
+                                  label: 'Deshacer',
+                                  onPressed: () => provider.restoreTransaction(
+                                      deleted,
+                                      index: deletedIdx),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
                     ),
                   ),
                 );
@@ -441,6 +569,50 @@ class ReceivablesModuleView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Me Deben / Cuentas por Cobrar'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -549,7 +721,24 @@ class ReceivablesModuleView extends StatelessWidget {
                                       ),
                                     );
                                     if (confirm == true) {
+                                      final deleted = item;
+                                      final deletedIdx = provider.receivables.indexOf(item);
                                       provider.deleteReceivable(item.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).clearSnackBars();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Cobro de "${deleted.debtorName}" eliminado'),
+                                            duration: const Duration(seconds: 4),
+                                            action: SnackBarAction(
+                                              label: 'Deshacer',
+                                              onPressed: () => provider.restoreReceivable(
+                                                  deleted,
+                                                  index: deletedIdx),
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),
@@ -822,6 +1011,50 @@ class SavingsGoalsModuleView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metas de Ahorro y Sobres'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -940,7 +1173,24 @@ class SavingsGoalsModuleView extends StatelessWidget {
                                       ),
                                     );
                                     if (confirm == true) {
+                                      final deleted = goal;
+                                      final deletedIdx = provider.savingsGoals.indexOf(goal);
                                       provider.deleteSavingsGoal(goal.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).clearSnackBars();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Meta "${deleted.name}" eliminada'),
+                                            duration: const Duration(seconds: 4),
+                                            action: SnackBarAction(
+                                              label: 'Deshacer',
+                                              onPressed: () => provider.restoreSavingsGoal(
+                                                  deleted,
+                                                  index: deletedIdx),
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),
@@ -1212,6 +1462,50 @@ class SubscriptionsModuleView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Suscripciones y Pagos Recurrentes'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -1435,7 +1729,24 @@ class SubscriptionsModuleView extends StatelessWidget {
                                       ),
                                     );
                                     if (confirm == true) {
+                                      final deleted = sub;
+                                      final deletedIdx = provider.subscriptions.indexOf(sub);
                                       provider.deleteSubscription(sub.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).clearSnackBars();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Suscripción "${deleted.name}" eliminada'),
+                                            duration: const Duration(seconds: 4),
+                                            action: SnackBarAction(
+                                              label: 'Deshacer',
+                                              onPressed: () => provider.restoreSubscription(
+                                                  deleted,
+                                                  index: deletedIdx),
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),
@@ -1598,6 +1909,48 @@ class DailyBudgetModuleView extends StatelessWidget {
         title: const Text('Gastos Hormiga y Presupuestos'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+          IconButton(
             icon: const Icon(Icons.create_new_folder_outlined),
             tooltip: 'Crear tope de categoría',
             onPressed: () => _showAddCategoryDialog(context, provider),
@@ -1753,7 +2106,24 @@ class DailyBudgetModuleView extends StatelessWidget {
                                       ),
                                     );
                                     if (confirm == true) {
+                                      final deleted = cat;
+                                      final deletedIdx = provider.budgetCategories.indexOf(cat);
                                       provider.deleteBudgetCategory(cat.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).clearSnackBars();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Presupuesto "${deleted.name}" eliminado'),
+                                            duration: const Duration(seconds: 4),
+                                            action: SnackBarAction(
+                                              label: 'Deshacer',
+                                              onPressed: () => provider.restoreBudgetCategory(
+                                                  deleted,
+                                                  index: deletedIdx),
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),
@@ -1841,7 +2211,24 @@ class DailyBudgetModuleView extends StatelessWidget {
                               ),
                             );
                             if (confirm == true) {
+                              final deleted = expense;
+                              final deletedIdx = provider.antExpenses.indexOf(expense);
                               provider.deleteAntExpense(expense.id);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Gasto "${deleted.title}" eliminado'),
+                                    duration: const Duration(seconds: 4),
+                                    action: SnackBarAction(
+                                      label: 'Deshacer',
+                                      onPressed: () => provider.restoreAntExpense(
+                                          deleted,
+                                          index: deletedIdx),
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           },
                         ),
@@ -2077,6 +2464,50 @@ class CreditCardsModuleView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tarjetas de Crédito y Facturación'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -2180,7 +2611,24 @@ class CreditCardsModuleView extends StatelessWidget {
                                       ),
                                     );
                                     if (confirm == true) {
+                                      final deleted = card;
+                                      final deletedIdx = provider.creditCards.indexOf(card);
                                       provider.deleteCreditCard(card.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).clearSnackBars();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Tarjeta "${deleted.name}" eliminada'),
+                                            duration: const Duration(seconds: 4),
+                                            action: SnackBarAction(
+                                              label: 'Deshacer',
+                                              onPressed: () => provider.restoreCreditCard(
+                                                  deleted,
+                                                  index: deletedIdx),
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),
@@ -2512,6 +2960,50 @@ class ShoppingListModuleView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lista de Compras / Presupuesto'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_outlined, color: Color(0xFF107C41)),
+            tooltip: 'Exportar a Excel (.xlsx)',
+            onPressed: () async {
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Generando planilla Excel de todos los módulos...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final path = await ExcelExportService.exportFullWorkbook(provider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Planilla Excel generada ($path)'),
+                      backgroundColor: const Color(0xFF107C41),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -2693,7 +3185,24 @@ class ShoppingListModuleView extends StatelessWidget {
                                   ),
                                 );
                                 if (confirm == true) {
+                                  final deleted = item;
+                                  final deletedIdx = provider.shoppingItems.indexOf(item);
                                   provider.deleteShoppingItem(item.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).clearSnackBars();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Artículo "${deleted.name}" eliminado'),
+                                        duration: const Duration(seconds: 4),
+                                        action: SnackBarAction(
+                                          label: 'Deshacer',
+                                          onPressed: () => provider.restoreShoppingItem(
+                                              deleted,
+                                              index: deletedIdx),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                             ),

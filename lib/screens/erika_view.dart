@@ -25,6 +25,16 @@ class ErikaView extends StatelessWidget {
         title: const Text('Préstamos y Deudas en Cuotas'),
         actions: [
           IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Nuevo Préstamo / Crédito',
             onPressed: () => _showAddLoanDialog(context, provider),
@@ -199,7 +209,41 @@ class ErikaView extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.delete_outline, size: 18),
                               tooltip: 'Eliminar',
-                              onPressed: () => provider.deleteErikaLoan(loan.id),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Eliminar Préstamo'),
+                                    content: Text('¿Deseas eliminar el registro del préstamo "${loan.creditor} (${loan.label})"?'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                      FilledButton(
+                                        style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        child: const Text('Eliminar'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  final deleted = loan;
+                                  final deletedIdx = provider.erikaLoans.indexOf(loan);
+                                  provider.deleteErikaLoan(loan.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).clearSnackBars();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Préstamo "${deleted.creditor} (${deleted.label})" eliminado'),
+                                        duration: const Duration(seconds: 4),
+                                        action: SnackBarAction(
+                                          label: 'Deshacer',
+                                          onPressed: () => provider.restoreErikaLoan(deleted, index: deletedIdx),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -359,7 +403,22 @@ class ErikaView extends StatelessWidget {
                       ),
                     );
                     if (confirm == true) {
+                      final deleted = loan;
+                      final deletedIdx = provider.erikaLoans.indexOf(loan);
                       provider.deleteErikaLoan(loan.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Préstamo "${deleted.creditor} (${deleted.label})" eliminado'),
+                            duration: const Duration(seconds: 4),
+                            action: SnackBarAction(
+                              label: 'Deshacer',
+                              onPressed: () => provider.restoreErikaLoan(deleted, index: deletedIdx),
+                            ),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),

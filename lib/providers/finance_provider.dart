@@ -12,6 +12,7 @@ import '../models/shared_config_model.dart';
 import '../models/transaction_model.dart';
 import '../services/firebase_sync_service.dart';
 import '../services/google_drive_backup_service.dart';
+import '../utils/currency_formatter.dart';
 
 class FinanceProvider extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
@@ -282,6 +283,18 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('backupFrequency', frequency);
+  }
+
+  // --- MODO PRIVACIDAD (OCULTAR SALDOS EN PÚBLICO) ---
+  bool _isPrivacyMode = false;
+  bool get isPrivacyMode => _isPrivacyMode;
+
+  Future<void> togglePrivacyMode() async {
+    _isPrivacyMode = !_isPrivacyMode;
+    CurrencyFormatter.isPrivacyMode = _isPrivacyMode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isPrivacyMode', _isPrivacyMode);
   }
 
   // --- LIVE SYNC EN TIEMPO REAL (CELULAR <-> PC) ---
@@ -840,6 +853,19 @@ class FinanceProvider extends ChangeNotifier {
         .catchError((e) => debugPrint('Cloud sync error: $e'));
   }
 
+  Future<void> restoreFiadoEntry(FiadoEntry entry, {int? index}) async {
+    if (index != null && index >= 0 && index <= _fiadoEntries.length) {
+      _fiadoEntries.insert(index, entry);
+    } else {
+      _fiadoEntries.insert(0, entry);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService
+        .saveFiadoEntry(entry)
+        .catchError((e) => debugPrint('Cloud sync error: $e'));
+  }
+
   Future<void> updateFiadoEntry(FiadoEntry updated) async {
     final idx = _fiadoEntries.indexWhere((e) => e.id == updated.id);
     if (idx == -1) return;
@@ -857,6 +883,19 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
     _syncService
         .deleteFiadoPayment(id)
+        .catchError((e) => debugPrint('Cloud sync error: $e'));
+  }
+
+  Future<void> restoreFiadoPayment(FiadoPayment payment, {int? index}) async {
+    if (index != null && index >= 0 && index <= _fiadoPayments.length) {
+      _fiadoPayments.insert(index, payment);
+    } else {
+      _fiadoPayments.insert(0, payment);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService
+        .saveFiadoPayment(payment)
         .catchError((e) => debugPrint('Cloud sync error: $e'));
   }
 
@@ -998,6 +1037,19 @@ class FinanceProvider extends ChangeNotifier {
     _syncService.deleteErikaLoan(id).catchError((_) {});
   }
 
+  Future<void> restoreErikaLoan(ErikaLoan loan, {int? index}) async {
+    if (index != null && index >= 0 && index <= _erikaLoans.length) {
+      _erikaLoans.insert(index, loan);
+    } else {
+      _erikaLoans.add(loan);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService
+        .saveErikaLoan(loan)
+        .catchError((e) => debugPrint('Cloud sync error: $e'));
+  }
+
   Future<void> updateErikaLoan(ErikaLoan updated) async {
     final idx = _erikaLoans.indexWhere((l) => l.id == updated.id);
     if (idx == -1) return;
@@ -1074,6 +1126,19 @@ class FinanceProvider extends ChangeNotifier {
     _syncService.deleteOtherDebt(id).catchError((_) {});
   }
 
+  Future<void> restoreOtherDebt(OtherDebt debt, {int? index}) async {
+    if (index != null && index >= 0 && index <= _otherDebts.length) {
+      _otherDebts.insert(index, debt);
+    } else {
+      _otherDebts.insert(0, debt);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService
+        .saveOtherDebt(debt)
+        .catchError((e) => debugPrint('Cloud sync error: $e'));
+  }
+
   // --- ACTIONS: GENERAL TRANSACTIONS ---
   Future<void> addTransaction({
     required String title,
@@ -1119,6 +1184,19 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
     _syncService
         .deleteTransaction(id)
+        .catchError((e) => debugPrint('Cloud sync error: $e'));
+  }
+
+  Future<void> restoreTransaction(TransactionModel tx, {int? index}) async {
+    if (index != null && index >= 0 && index <= _transactions.length) {
+      _transactions.insert(index, tx);
+    } else {
+      _transactions.insert(0, tx);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService
+        .saveTransaction(tx)
         .catchError((e) => debugPrint('Cloud sync error: $e'));
   }
 
@@ -1197,6 +1275,17 @@ class FinanceProvider extends ChangeNotifier {
     _syncService.deleteReceivable(id).catchError((_) {});
   }
 
+  Future<void> restoreReceivable(ReceivableModel item, {int? index}) async {
+    if (index != null && index >= 0 && index <= _receivables.length) {
+      _receivables.insert(index, item);
+    } else {
+      _receivables.insert(0, item);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.saveReceivable(item).catchError((_) {});
+  }
+
   // --- ACTIONS: MÓDULO 6 (METAS DE AHORRO Y SOBRES) ---
   Future<void> addSavingsGoal({
     required String name,
@@ -1246,6 +1335,17 @@ class FinanceProvider extends ChangeNotifier {
     await _saveData();
     notifyListeners();
     _syncService.deleteSavingsGoal(id).catchError((_) {});
+  }
+
+  Future<void> restoreSavingsGoal(SavingsGoalModel goal, {int? index}) async {
+    if (index != null && index >= 0 && index <= _savingsGoals.length) {
+      _savingsGoals.insert(index, goal);
+    } else {
+      _savingsGoals.add(goal);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.saveSavingsGoal(goal).catchError((_) {});
   }
 
   // --- ACTIONS: MÓDULO 7 (SUSCRIPCIONES Y PAGOS RECURRENTES) ---
@@ -1311,6 +1411,18 @@ class FinanceProvider extends ChangeNotifier {
     _syncService.deleteSubscription(id).catchError((_) {});
   }
 
+  Future<void> restoreSubscription(SubscriptionModel sub, {int? index}) async {
+    if (index != null && index >= 0 && index <= _subscriptions.length) {
+      _subscriptions.insert(index, sub);
+    } else {
+      _subscriptions.add(sub);
+    }
+    _subscriptions.sort((a, b) => a.billingDay.compareTo(b.billingDay));
+    await _saveData();
+    notifyListeners();
+    _syncService.saveSubscription(sub).catchError((_) {});
+  }
+
   // --- ACTIONS: MÓDULO 8 (GASTOS HORMIGA Y PRESUPUESTO DIARIO) ---
   Future<void> addBudgetCategory({
     required String name,
@@ -1332,6 +1444,17 @@ class FinanceProvider extends ChangeNotifier {
     await _saveData();
     notifyListeners();
     _syncService.deleteBudgetCategory(id).catchError((_) {});
+  }
+
+  Future<void> restoreBudgetCategory(BudgetCategoryModel cat, {int? index}) async {
+    if (index != null && index >= 0 && index <= _budgetCategories.length) {
+      _budgetCategories.insert(index, cat);
+    } else {
+      _budgetCategories.add(cat);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.saveBudgetCategory(cat).catchError((_) {});
   }
 
   Future<void> updateBudgetCategory(BudgetCategoryModel updated) async {
@@ -1382,6 +1505,17 @@ class FinanceProvider extends ChangeNotifier {
     await _saveData();
     notifyListeners();
     _syncService.deleteAntExpense(id).catchError((_) {});
+  }
+
+  Future<void> restoreAntExpense(AntExpenseModel item, {int? index}) async {
+    if (index != null && index >= 0 && index <= _antExpenses.length) {
+      _antExpenses.insert(index, item);
+    } else {
+      _antExpenses.insert(0, item);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.saveAntExpense(item).catchError((_) {});
   }
 
   // --- ACTIONS: MÓDULO 9 (TARJETAS DE CRÉDITO) ---
@@ -1449,6 +1583,17 @@ class FinanceProvider extends ChangeNotifier {
     _syncService.deleteCreditCard(id).catchError((_) {});
   }
 
+  Future<void> restoreCreditCard(CreditCardModel card, {int? index}) async {
+    if (index != null && index >= 0 && index <= _creditCards.length) {
+      _creditCards.insert(index, card);
+    } else {
+      _creditCards.add(card);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.saveCreditCard(card).catchError((_) {});
+  }
+
   Future<void> updateCreditCard(CreditCardModel updated) async {
     final idx = _creditCards.indexWhere((c) => c.id == updated.id);
     if (idx == -1) return;
@@ -1491,6 +1636,17 @@ class FinanceProvider extends ChangeNotifier {
     await _saveData();
     notifyListeners();
     _syncService.deleteShoppingItem(id).catchError((_) {});
+  }
+
+  Future<void> restoreShoppingItem(ShoppingItemModel item, {int? index}) async {
+    if (index != null && index >= 0 && index <= _shoppingItems.length) {
+      _shoppingItems.insert(index, item);
+    } else {
+      _shoppingItems.add(item);
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.saveShoppingItem(item).catchError((_) {});
   }
 
   Future<void> updateShoppingItem(ShoppingItemModel updated) async {
@@ -1732,6 +1888,9 @@ class FinanceProvider extends ChangeNotifier {
     if (freqRaw != null) {
       _backupFrequency = freqRaw;
     }
+
+    _isPrivacyMode = prefs.getBool('isPrivacyMode') ?? false;
+    CurrencyFormatter.isPrivacyMode = _isPrivacyMode;
 
     if (themeRaw != null) {
       _themeMode = ThemeMode.values.firstWhere(

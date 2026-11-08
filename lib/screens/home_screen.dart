@@ -6,6 +6,7 @@ import '../models/modular_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
+import '../services/local_notification_service.dart';
 import '../widgets/app_update_dialog.dart';
 import 'dashboard_view.dart';
 import 'erika_view.dart';
@@ -48,6 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       _checkInAppUpdates();
+      LocalNotificationService.instance
+          .syncAndScheduleReminders(finance)
+          .catchError((_) => 0);
     });
   }
 

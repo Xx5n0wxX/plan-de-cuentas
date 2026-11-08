@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../widgets/app_lock_gate.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -21,7 +22,7 @@ class AuthWrapper extends StatelessWidget {
     }
 
     if (auth.isAuthenticated) {
-      return const HomeScreen();
+      return const AppLockGate(child: HomeScreen());
     }
 
     return const LoginScreen();

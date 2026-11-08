@@ -8,6 +8,7 @@ import '../models/erika_loan_model.dart';
 import '../models/modular_models.dart';
 import '../models/transaction_model.dart';
 import '../providers/finance_provider.dart';
+import '../services/excel_export_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_fiado_dialog.dart';
@@ -102,8 +103,66 @@ class DashboardView extends StatelessWidget {
                         ),
                       ],
                     ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton.filledTonal(
+                          icon: Icon(
+                            provider.isPrivacyMode
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: provider.isPrivacyMode
+                                ? Colors.amber.shade700
+                                : null,
+                          ),
+                          tooltip: provider.isPrivacyMode
+                              ? 'Mostrar montos'
+                              : 'Ocultar montos (Modo Privacidad)',
+                          onPressed: () => provider.togglePrivacyMode(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          icon: const Icon(Icons.table_view_outlined,
+                              color: Color(0xFF107C41)),
+                          tooltip: 'Exportar a Excel (.xlsx)',
+                          onPressed: () async {
+                            try {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Generando planilla Excel de todos los módulos...'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              final path = await ExcelExportService
+                                  .exportFullWorkbook(provider);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '✓ Planilla Excel generada ($path)'),
+                                    backgroundColor: const Color(0xFF107C41),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error al exportar: $e'),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                     OutlinedButton.icon(
-                      onPressed: () => onNavigateToModule?.call('modules_hub'),
+                      onPressed: () =>
+                          onNavigateToModule?.call('modules_hub'),
                       icon: const Icon(Icons.widgets_outlined, size: 18),
                       label: Text(
                           'Módulos (${provider.activeModules.length + 1}/10)'),

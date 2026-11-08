@@ -362,6 +362,16 @@ class FiadoView extends StatelessWidget {
         title: const Text('Libretas y Cuentas Abiertas'),
         actions: [
           IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+          IconButton(
             icon: const Icon(Icons.create_new_folder_outlined),
             tooltip: 'Nueva Libreta',
             onPressed: () => _showNewAccountDialog(context, provider),
@@ -789,7 +799,26 @@ class FiadoView extends StatelessWidget {
                                           ),
                                         );
                                         if (confirm == true) {
+                                          final deletedEntry = entry;
+                                          final deletedIdx = provider.fiadoEntries.indexOf(entry);
                                           provider.deleteFiadoEntry(entry.id);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).clearSnackBars();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(deletedEntry.note.isNotEmpty
+                                                    ? 'Anotación "${deletedEntry.note}" eliminada'
+                                                    : 'Anotación eliminada'),
+                                                duration: const Duration(seconds: 4),
+                                                action: SnackBarAction(
+                                                  label: 'Deshacer',
+                                                  onPressed: () {
+                                                    provider.restoreFiadoEntry(deletedEntry, index: deletedIdx);
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          }
                                         }
                                       },
                                     ),
@@ -930,7 +959,24 @@ class FiadoView extends StatelessWidget {
                                           ),
                                         );
                                         if (confirm == true) {
+                                          final deletedPayment = payment;
+                                          final deletedIdx = provider.fiadoPayments.indexOf(payment);
                                           provider.deleteFiadoPayment(payment.id);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).clearSnackBars();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: const Text('Abono eliminado'),
+                                                duration: const Duration(seconds: 4),
+                                                action: SnackBarAction(
+                                                  label: 'Deshacer',
+                                                  onPressed: () {
+                                                    provider.restoreFiadoPayment(deletedPayment, index: deletedIdx);
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          }
                                         }
                                       },
                                     ),

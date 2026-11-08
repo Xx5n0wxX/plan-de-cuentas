@@ -51,6 +51,16 @@ class _TransactionsViewState extends State<TransactionsView> {
         title: Text('Libro de Movimientos ($monthName)'),
         actions: [
           IconButton(
+            icon: Icon(
+              provider.isPrivacyMode ? Icons.visibility_off : Icons.visibility,
+              color: provider.isPrivacyMode ? Colors.amber.shade700 : null,
+            ),
+            tooltip: provider.isPrivacyMode
+                ? 'Mostrar montos'
+                : 'Ocultar montos (Modo Privacidad)',
+            onPressed: () => provider.togglePrivacyMode(),
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Nuevo Movimiento',
             onPressed: () {
@@ -331,7 +341,24 @@ class _TransactionsViewState extends State<TransactionsView> {
                                             ),
                                           );
                                           if (confirm == true) {
+                                            final deletedTx = tx;
+                                            final deletedIdx = provider.transactions.indexOf(tx);
                                             provider.deleteTransaction(tx.id);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).clearSnackBars();
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Movimiento "${deletedTx.title}" eliminado'),
+                                                  duration: const Duration(seconds: 4),
+                                                  action: SnackBarAction(
+                                                    label: 'Deshacer',
+                                                    onPressed: () {
+                                                      provider.restoreTransaction(deletedTx, index: deletedIdx);
+                                                    },
+                                                  ),
+                                                ),
+                                              );
+                                            }
                                           }
                                         },
                                       ),

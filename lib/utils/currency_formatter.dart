@@ -7,11 +7,20 @@ class CurrencyFormatter {
     decimalDigits: 0,
   );
 
-  static String format(double amount) {
+  static bool isPrivacyMode = false;
+  static const String maskedCurrency = '\$ ••••••';
+
+  static String format(double amount, {bool allowPrivacy = true}) {
+    if (allowPrivacy && isPrivacyMode) {
+      return maskedCurrency;
+    }
     return _clpFormat.format(amount);
   }
 
-  static String formatInt(int amount) {
+  static String formatInt(int amount, {bool allowPrivacy = true}) {
+    if (allowPrivacy && isPrivacyMode) {
+      return maskedCurrency;
+    }
     return _clpFormat.format(amount);
   }
 
