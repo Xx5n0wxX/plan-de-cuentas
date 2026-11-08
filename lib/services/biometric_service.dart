@@ -28,6 +28,8 @@ class BiometricService extends ChangeNotifier {
   // In-memory lock state
   bool _isAppLocked = false;
   bool _isAuthenticating = false;
+  DateTime? _pausedAt;
+  DateTime? _lastUnlockTimestamp;
 
   // For unit testing overrides
   static bool? testDeviceSupported;
@@ -46,6 +48,9 @@ class BiometricService extends ChangeNotifier {
   bool get isAppLocked => _isLockEnabled && _isAppLocked;
   bool get hasCustomPin => _customPin != null && _customPin!.isNotEmpty;
   bool get isAuthenticating => _isAuthenticating;
+
+  @visibleForTesting
+  set lastUnlockTimestamp(DateTime? val) => _lastUnlockTimestamp = val;
 
   bool get hasBiometricHardware =>
       isDeviceSupported && (canCheckBiometrics || availableBiometrics.isNotEmpty);
@@ -76,7 +81,7 @@ class BiometricService extends ChangeNotifier {
       _lockOnBackground = prefs.getBool(_keyLockOnBackground) ?? true;
       _customPin = prefs.getString(_keyCustomPin);
 
-      // Lock on initial launch if security is enabled
+      // Lock on initial cold launch if security is enabled
       if (_isLockEnabled) {
         _isAppLocked = true;
       }
@@ -117,6 +122,8 @@ class BiometricService extends ChangeNotifier {
     if (testAuthSuccess != null) {
       if (testAuthSuccess!) {
         _isAppLocked = false;
+        _lastUnlockTimestamp = DateTime.now();
+        _pausedAt = null;
         notifyListeners();
       }
       return testAuthSuccess!;
@@ -129,7 +136,6 @@ class BiometricService extends ChangeNotifier {
 
     try {
       if (kIsWeb) {
-        // Web does not support native local_auth biometric prompts
         _isAuthenticating = false;
         notifyListeners();
         return false;
@@ -144,8 +150,13 @@ class BiometricService extends ChangeNotifier {
 
       if (authenticated) {
         _isAppLocked = false;
+        _lastUnlockTimestamp = DateTime.now();
+        _pausedAt = null;
       }
 
+      // Small pause to allow the native OS resume cycle to finish
+      // so handleAppLifecycleState does not misinterpret the prompt dismissal as an app switch
+      await Future.delayed(const Duration(milliseconds: 250));
       _isAuthenticating = false;
       notifyListeners();
       return authenticated;
@@ -163,11 +174,16 @@ class BiometricService extends ChangeNotifier {
   }
 
   /// Changes the lock enabled state.
-  /// If enabling, callers should first authenticate or have confirmed PIN.
   Future<void> setLockEnabled(bool enabled) async {
     _isLockEnabled = enabled;
     if (!enabled) {
       _isAppLocked = false;
+      _pausedAt = null;
+    } else {
+      // When turning ON in settings, keep current session active
+      _isAppLocked = false;
+      _lastUnlockTimestamp = DateTime.now();
+      _pausedAt = null;
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyBiometricEnabled, enabled);
@@ -197,6 +213,8 @@ class BiometricService extends ChangeNotifier {
     final matched = _customPin == inputPin.trim();
     if (matched) {
       _isAppLocked = false;
+      _lastUnlockTimestamp = DateTime.now();
+      _pausedAt = null;
       notifyListeners();
     }
     return matched;
@@ -205,28 +223,38 @@ class BiometricService extends ChangeNotifier {
   void lockApp() {
     if (_isLockEnabled && !_isAppLocked) {
       _isAppLocked = true;
+      _pausedAt = null;
       notifyListeners();
     }
   }
 
   void unlockApp() {
-    if (_isAppLocked) {
-      _isAppLocked = false;
-      notifyListeners();
-    }
+    _isAppLocked = false;
+    _lastUnlockTimestamp = DateTime.now();
+    _pausedAt = null;
+    notifyListeners();
   }
 
   void handleAppLifecycleState(AppLifecycleState state) {
     if (!_isLockEnabled || !_lockOnBackground) return;
 
+    // Never process background locks if biometric prompt is actively running
+    if (_isAuthenticating) return;
+
     if (state == AppLifecycleState.paused) {
-      // Mark as locked when sent to background
-      _isAppLocked = true;
-      notifyListeners();
+      _pausedAt = DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
-      // Re-assert lock on resume
-      if (!_isAppLocked) {
+      // If we just unlocked recently (within 3 seconds), do not re-lock
+      if (_lastUnlockTimestamp != null &&
+          DateTime.now().difference(_lastUnlockTimestamp!).inSeconds < 3) {
+        _pausedAt = null;
+        return;
+      }
+
+      // If user had actually paused/backgrounded the app, re-lock on resume
+      if (_pausedAt != null) {
         _isAppLocked = true;
+        _pausedAt = null;
         notifyListeners();
       }
     }

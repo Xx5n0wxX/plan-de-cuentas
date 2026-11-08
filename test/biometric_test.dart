@@ -60,22 +60,33 @@ void main() {
       expect(bio.isAppLocked, isFalse);
     });
 
-    test('Lifecycle state changes trigger background locking', () async {
+    test('Lifecycle state changes trigger background locking correctly without loop', () async {
       final bio = BiometricService.instance;
       await bio.setLockEnabled(true);
       await bio.setLockOnBackground(true);
       bio.unlockApp();
       expect(bio.isAppLocked, isFalse);
 
+      // Simulate time passed while using app
+      bio.lastUnlockTimestamp = DateTime.now().subtract(const Duration(seconds: 10));
+
+      // Simulate normal background and resume: should lock
       bio.handleAppLifecycleState(AppLifecycleState.paused);
+      bio.handleAppLifecycleState(AppLifecycleState.resumed);
       expect(bio.isAppLocked, isTrue);
 
+      // Unlock
       bio.unlockApp();
+      expect(bio.isAppLocked, isFalse);
+
+      // Immediate resume right after unlock (system biometric prompt dismissal) should NOT lock
+      bio.handleAppLifecycleState(AppLifecycleState.resumed);
       expect(bio.isAppLocked, isFalse);
 
       // If lockOnBackground is disabled, it should not lock
       await bio.setLockOnBackground(false);
       bio.handleAppLifecycleState(AppLifecycleState.paused);
+      bio.handleAppLifecycleState(AppLifecycleState.resumed);
       expect(bio.isAppLocked, isFalse);
     });
 

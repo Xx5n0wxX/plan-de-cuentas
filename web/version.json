@@ -1,8 +1,8 @@
 {
-  "version": "2.4.0",
-  "buildNumber": 240,
+  "version": "2.4.1",
+  "buildNumber": 241,
   "forceUpdate": false,
-  "changelog": "• Modo Privacidad: Botón con ojo para ocultar/mostrar saldos ($ ••••••) en todas las pantallas.\n• Botón Deshacer (Undo): Opción para restaurar cualquier elemento eliminado accidentalmente.\n• Exportador a Excel (.xlsx): Planilla completa y estructurada con 11 pestañas para respaldo o auditoría.\n• Recordatorios y Notificaciones: Avisos locales de vencimiento de cuotas, tarjetas y suscripciones.\n• Bloqueo Biométrico y PIN: Protección con Huella dactilar / Face ID y PIN numérico de respaldo.",
+  "changelog": "• Corrección crítica de Biometría: Eliminado bucle infinito al verificar huella dactilar o Face ID.\n• Desbloqueo suave y sin rebloqueos al salir del diálogo del sistema Android.\n• Sesión activa preservada al habilitar la protección desde Ajustes.\n• Todas las 4 mejoras activas (Modo Privacidad, Deshacer, Exportador Excel y Notificaciones).",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

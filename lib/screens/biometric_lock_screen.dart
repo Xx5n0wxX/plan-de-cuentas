@@ -18,12 +18,16 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
   final TextEditingController _pinController = TextEditingController();
   bool _showPinInput = false;
   String? _pinErrorMessage;
+  bool _hasAutoPrompted = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _triggerBiometricPrompt();
+      if (!_hasAutoPrompted && mounted) {
+        _hasAutoPrompted = true;
+        _triggerBiometricPrompt();
+      }
     });
   }
 
@@ -35,7 +39,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
   Future<void> _triggerBiometricPrompt() async {
     final bio = BiometricService.instance;
-    if (!bio.isAppLocked) return;
+    if (!bio.isAppLocked || bio.isAuthenticating) return;
 
     final success = await bio.authenticate(
       reason: 'Desbloquea Plan de Cuentas para acceder a tus finanzas',
