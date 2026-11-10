@@ -10,4 +10,4 @@
     android:configure="com.diegoplan.plan_de_cuentas.QuickAddConfigActivity"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:previewImage="@android:drawable/ic_input_add" />
+    android:previewImage="@drawable/quick_add_widget_bg" />

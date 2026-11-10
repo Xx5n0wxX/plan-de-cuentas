@@ -35,6 +35,7 @@
         <!-- QuickAdd widget: ingreso rápido sin entrar a la app -->
         <receiver
             android:name=".QuickAddWidgetProvider"
+            android:label="@string/quick_add_title"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
