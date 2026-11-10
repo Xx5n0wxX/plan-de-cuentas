@@ -69,7 +69,7 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
 
             // 1. Tocar el cuerpo o cabecera del widget abre la app completa
             val appIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             val appPending = PendingIntent.getActivity(
                 context,
@@ -84,7 +84,7 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             val expenseIntent = Intent(context, QuickAddOverlayActivity::class.java).apply {
                 putExtra(QuickAddAction.EXTRA_ACTION_ID, QuickAddAction.ADD_TRANSACTION)
                 putExtra("transaction_type", "expense")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             val expensePending = PendingIntent.getActivity(
                 context,
@@ -98,7 +98,7 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             val incomeIntent = Intent(context, QuickAddOverlayActivity::class.java).apply {
                 putExtra(QuickAddAction.EXTRA_ACTION_ID, QuickAddAction.ADD_TRANSACTION)
                 putExtra("transaction_type", "income")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             val incomePending = PendingIntent.getActivity(
                 context,
@@ -111,7 +111,7 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             // 4. Botón [🛒 Lista]: abre overlay para agregar producto a la lista de compras
             val shoppingIntent = Intent(context, QuickAddOverlayActivity::class.java).apply {
                 putExtra(QuickAddAction.EXTRA_ACTION_ID, QuickAddAction.ADD_SHOPPING_ITEM)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             val shoppingPending = PendingIntent.getActivity(
                 context,
@@ -124,7 +124,7 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             // 5. Botón [📋 Fiado]: abre overlay para registrar en libretas / fiado
             val fiadoIntent = Intent(context, QuickAddOverlayActivity::class.java).apply {
                 putExtra(QuickAddAction.EXTRA_ACTION_ID, QuickAddAction.ADD_FIADO)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             val fiadoPending = PendingIntent.getActivity(
                 context,
