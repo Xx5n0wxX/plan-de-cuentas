@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/erika_loan_model.dart';
 import '../models/fiado_model.dart';
@@ -51,6 +52,7 @@ class LinkedDeviceModel {
 
 class FirebaseSyncService {
   String? _activeVaultId;
+  final _uuid = const Uuid();
 
   void setActiveVaultId(String? vaultId) {
     _activeVaultId = vaultId;
@@ -372,6 +374,16 @@ class FirebaseSyncService {
     });
   }
 
+  Stream<List<ShoppingListModel>> getShoppingListsStream() {
+    final col = _userCol('shopping_lists');
+    if (col == null) return const Stream.empty();
+    return col.snapshots().map((snap) {
+      return snap.docs
+          .map((doc) => ShoppingListModel.fromJson(doc.data()))
+          .toList();
+    });
+  }
+
   // --- OPERACIONES DE ESCRITURA EN LA NUBE ---
   Future<void> saveTransaction(TransactionModel tx) async {
     final col = _userCol('transactions');
@@ -573,6 +585,20 @@ class FirebaseSyncService {
     await col.doc(id).delete();
   }
 
+  Future<void> saveShoppingList(ShoppingListModel list) async {
+    final col = _userCol('shopping_lists');
+    if (col == null) return;
+    await ensureAuthenticated();
+    await col.doc(list.id).set(list.toJson());
+  }
+
+  Future<void> deleteShoppingList(String id) async {
+    final col = _userCol('shopping_lists');
+    if (col == null) return;
+    await ensureAuthenticated();
+    await col.doc(id).delete();
+  }
+
   /// Sube todos los datos locales a la bóveda compartida para Live Sync
   Future<void> syncAllLocalDataToCloud({
     required List<TransactionModel> transactions,
@@ -587,7 +613,7 @@ class FirebaseSyncService {
     List<BudgetCategoryModel> budgetCategories = const [],
     List<AntExpenseModel> antExpenses = const [],
     List<CreditCardModel> creditCards = const [],
-    List<ShoppingItemModel> shoppingItems = const [],
+    List<ShoppingListModel> shoppingLists = const [],
     List<String> activeModules = const [],
     bool onboardingCompleted = false,
     List<String> openAccountNames = const [],
@@ -641,9 +667,9 @@ class FirebaseSyncService {
       final col = _userCol('credit_cards');
       if (col != null) batch.set(col.doc(card.id), card.toJson());
     }
-    for (final item in shoppingItems) {
-      final col = _userCol('shopping_items');
-      if (col != null) batch.set(col.doc(item.id), item.toJson());
+    for (final list in shoppingLists) {
+      final col = _userCol('shopping_lists');
+      if (col != null) batch.set(col.doc(list.id), list.toJson());
     }
 
     final vid = currentVaultId ?? 'default_user';
@@ -683,6 +709,7 @@ class FirebaseSyncService {
     final antCol = _userCol('ant_expenses');
     final cardCol = _userCol('credit_cards');
     final shopCol = _userCol('shopping_items');
+    final listsCol = _userCol('shopping_lists');
 
     if (txCol == null ||
         fiadoCol == null ||
@@ -704,6 +731,7 @@ class FirebaseSyncService {
     final antSnap = antCol != null ? await antCol.get() : null;
     final cardSnap = cardCol != null ? await cardCol.get() : null;
     final shopSnap = shopCol != null ? await shopCol.get() : null;
+    final listsSnap = listsCol != null ? await listsCol.get() : null;
 
     final configDoc = await fs
         .collection('users')
@@ -729,10 +757,27 @@ class FirebaseSyncService {
         (antSnap?.docs.isNotEmpty ?? false) ||
         (cardSnap?.docs.isNotEmpty ?? false) ||
         (shopSnap?.docs.isNotEmpty ?? false) ||
+        (listsSnap?.docs.isNotEmpty ?? false) ||
         modDoc.exists;
 
     if (!hasAnyData) {
       return null;
+    }
+
+    final allLists = <ShoppingListModel>[];
+    if (listsSnap?.docs.isNotEmpty ?? false) {
+      allLists.addAll(listsSnap!.docs
+          .map((d) => ShoppingListModel.fromJson(d.data())));
+    } else if (shopSnap?.docs.isNotEmpty ?? false) {
+      // Compatibilidad con la colección legacy 'shopping_items'
+      allLists.add(ShoppingListModel(
+        id: _uuid.v4(),
+        name: 'Mi lista',
+        createdAt: DateTime.now(),
+        items: shopSnap!.docs
+            .map((d) => ShoppingItemModel.fromJson(d.data()))
+            .toList(),
+      ));
     }
 
     return {
@@ -770,6 +815,7 @@ class FirebaseSyncService {
               .map((d) => CreditCardModel.fromJson(d.data()))
               .toList() ??
           <CreditCardModel>[],
+      'shoppingLists': allLists,
       'shoppingItems': shopSnap?.docs
               .map((d) => ShoppingItemModel.fromJson(d.data()))
               .toList() ??
@@ -799,6 +845,7 @@ class FirebaseSyncService {
       'ant_expenses',
       'credit_cards',
       'shopping_items',
+      'shopping_lists',
     ];
     for (final c in cols) {
       try {

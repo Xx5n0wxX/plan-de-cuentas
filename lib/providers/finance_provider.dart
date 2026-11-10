@@ -39,7 +39,8 @@ class FinanceProvider extends ChangeNotifier {
   List<BudgetCategoryModel> _budgetCategories = [];
   List<AntExpenseModel> _antExpenses = [];
   List<CreditCardModel> _creditCards = [];
-  List<ShoppingItemModel> _shoppingItems = [];
+  List<ShoppingListModel> _shoppingLists = [];
+  String _activeShoppingListId = '';
 
   ThemeMode _themeMode = ThemeMode.system;
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
@@ -93,7 +94,17 @@ class FinanceProvider extends ChangeNotifier {
   List<BudgetCategoryModel> get budgetCategories => _budgetCategories;
   List<AntExpenseModel> get antExpenses => _antExpenses;
   List<CreditCardModel> get creditCards => _creditCards;
-  List<ShoppingItemModel> get shoppingItems => _shoppingItems;
+  List<ShoppingListModel> get shoppingLists => _shoppingLists;
+  ShoppingListModel? get activeShoppingList {
+    if (_shoppingLists.isEmpty) return null;
+    for (final list in _shoppingLists) {
+      if (list.id == _activeShoppingListId) return list;
+    }
+    return _shoppingLists.first;
+  }
+  String get activeShoppingListId => activeShoppingList?.id ?? '';
+  List<ShoppingItemModel> get shoppingItems =>
+      activeShoppingList?.items ?? const [];
 
   FinanceProvider() {
     _loadData();
@@ -436,8 +447,12 @@ class FinanceProvider extends ChangeNotifier {
       );
 
       _liveSubs.add(
-        _syncService.getShoppingItemsStream().listen((list) {
-          _shoppingItems = list;
+        _syncService.getShoppingListsStream().listen((list) {
+          _shoppingLists = list;
+          if (list.isNotEmpty &&
+              !_shoppingLists.any((l) => l.id == _activeShoppingListId)) {
+            _activeShoppingListId = list.first.id;
+          }
           _saveDataLocallyOnly();
           notifyListeners();
         }, onError: (_) {}),
@@ -477,7 +492,7 @@ class FinanceProvider extends ChangeNotifier {
         budgetCategories: _budgetCategories,
         antExpenses: _antExpenses,
         creditCards: _creditCards,
-        shoppingItems: _shoppingItems,
+        shoppingLists: _shoppingLists,
         activeModules: _activeModules,
         onboardingCompleted: _onboardingCompleted,
         openAccountNames: _openAccountNames,
@@ -523,7 +538,7 @@ class FinanceProvider extends ChangeNotifier {
       'budgetCategories': _budgetCategories.map((e) => e.toJson()).toList(),
       'antExpenses': _antExpenses.map((e) => e.toJson()).toList(),
       'creditCards': _creditCards.map((e) => e.toJson()).toList(),
-      'shoppingItems': _shoppingItems.map((e) => e.toJson()).toList(),
+      'shoppingLists': _shoppingLists.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -676,11 +691,33 @@ class FinanceProvider extends ChangeNotifier {
             .map((e) => CreditCardModel.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       }
-      if (data['shoppingItems'] != null) {
-        _shoppingItems = (data['shoppingItems'] as List)
+      if (data['shoppingLists'] != null) {
+        _shoppingLists = (data['shoppingLists'] as List)
+            .map((e) =>
+                ShoppingListModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        if (_shoppingLists.isNotEmpty &&
+            !_shoppingLists.any((l) => l.id == _activeShoppingListId)) {
+          _activeShoppingListId = _shoppingLists.first.id;
+        }
+      } else if (data['shoppingItems'] != null) {
+        // Compatibilidad con backups previos (artículos sueltos): se
+        // consolidan en un único documento de lista.
+        final legacy = (data['shoppingItems'] as List)
             .map(
                 (e) => ShoppingItemModel.fromJson(Map<String, dynamic>.from(e)))
             .toList();
+        if (legacy.isNotEmpty) {
+          _shoppingLists = [
+            ShoppingListModel(
+              id: _uuid.v4(),
+              name: 'Mi lista',
+              createdAt: DateTime.now(),
+              items: legacy,
+            ),
+          ];
+          _activeShoppingListId = _shoppingLists.first.id;
+        }
       }
 
       await _saveData();
@@ -825,12 +862,10 @@ class FinanceProvider extends ChangeNotifier {
       _creditCards.fold(0.0, (s, c) => s + c.nextBillingAmount);
 
   // --- MÓDULO 10: LISTA DE COMPRAS ---
-  double get shoppingCartEstimatedTotal =>
-      _shoppingItems.fold(0.0, (s, i) => s + i.subtotal);
+  double get shoppingCartEstimatedTotal => activeShoppingList?.subtotal ?? 0.0;
 
-  double get shoppingCartCheckedTotal => _shoppingItems
-      .where((i) => i.isChecked)
-      .fold(0.0, (s, i) => s + i.subtotal);
+  double get shoppingCartCheckedTotal =>
+      activeShoppingList?.checkedSubtotal ?? 0.0;
 
   // --- ACTIONS: LIBRETAS ABIERTAS / FIADO ---
   Future<void> addFiadoEntry(
@@ -1617,7 +1652,77 @@ class FinanceProvider extends ChangeNotifier {
     _syncService.saveCreditCard(updated).catchError((_) {});
   }
 
-  // --- ACTIONS: MÓDULO 10 (LISTA DE COMPRAS / SUPERMERCADO) ---
+  // --- ACTIONS: MÓDULO 10 (LISTAS DE COMPRAS / SUPERMERCADO) ---
+  void _replaceShoppingList(ShoppingListModel updated) {
+    final idx = _shoppingLists.indexWhere((l) => l.id == updated.id);
+    if (idx != -1) {
+      _shoppingLists[idx] = updated;
+    } else {
+      _shoppingLists.add(updated);
+    }
+  }
+
+  Future<ShoppingListModel> _ensureActiveList() async {
+    final current = activeShoppingList;
+    if (current != null) return current;
+    return await createShoppingList('Mi lista');
+  }
+
+  ShoppingListModel? _findListContainingItem(String itemId) {
+    for (final list in _shoppingLists) {
+      if (list.items.any((i) => i.id == itemId)) return list;
+    }
+    return null;
+  }
+
+  Future<ShoppingListModel> createShoppingList(String name) async {
+    final trimmed = name.trim().isEmpty ? 'Nueva lista' : name.trim();
+    final list = ShoppingListModel(
+      id: _uuid.v4(),
+      name: trimmed,
+      createdAt: DateTime.now(),
+    );
+    _shoppingLists.add(list);
+    _activeShoppingListId = list.id;
+    await _saveData();
+    notifyListeners();
+    _syncService.saveShoppingList(list).catchError((_) {});
+    return list;
+  }
+
+  Future<void> setActiveShoppingList(String id) async {
+    if (_activeShoppingListId == id) return;
+    if (!_shoppingLists.any((l) => l.id == id)) return;
+    _activeShoppingListId = id;
+    await _saveData();
+    notifyListeners();
+  }
+
+  Future<void> renameShoppingList(String id, String name) async {
+    final idx = _shoppingLists.indexWhere((l) => l.id == id);
+    if (idx == -1) return;
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final updated = _shoppingLists[idx].copyWith(name: trimmed);
+    _shoppingLists[idx] = updated;
+    await _saveData();
+    notifyListeners();
+    _syncService.saveShoppingList(updated).catchError((_) {});
+  }
+
+  Future<void> deleteShoppingList(String id) async {
+    final idx = _shoppingLists.indexWhere((l) => l.id == id);
+    if (idx == -1) return;
+    _shoppingLists.removeAt(idx);
+    if (_activeShoppingListId == id) {
+      _activeShoppingListId =
+          _shoppingLists.isNotEmpty ? _shoppingLists.first.id : '';
+    }
+    await _saveData();
+    notifyListeners();
+    _syncService.deleteShoppingList(id).catchError((_) {});
+  }
+
   Future<void> addShoppingItem({
     required String name,
     required double estimatedPrice,
@@ -1629,55 +1734,79 @@ class FinanceProvider extends ChangeNotifier {
       estimatedPrice: estimatedPrice,
       quantity: quantity < 1 ? 1 : quantity,
     );
-    _shoppingItems.add(item);
+    final current = await _ensureActiveList();
+    final updated = current.copyWith(items: [...current.items, item]);
+    _replaceShoppingList(updated);
     await _saveData();
     notifyListeners();
-    _syncService.saveShoppingItem(item).catchError((_) {});
+    _syncService.saveShoppingList(updated).catchError((_) {});
   }
 
   Future<void> toggleShoppingItemChecked(String id, bool checked) async {
-    final idx = _shoppingItems.indexWhere((i) => i.id == id);
-    if (idx == -1) return;
-    final updated = _shoppingItems[idx].copyWith(isChecked: checked);
-    _shoppingItems[idx] = updated;
+    final current = _findListContainingItem(id);
+    if (current == null) return;
+    final items = [
+      for (final i in current.items)
+        i.id == id ? i.copyWith(isChecked: checked) : i,
+    ];
+    final updated = current.copyWith(items: items);
+    _replaceShoppingList(updated);
     await _saveData();
     notifyListeners();
-    _syncService.saveShoppingItem(updated).catchError((_) {});
+    _syncService.saveShoppingList(updated).catchError((_) {});
   }
 
   Future<void> deleteShoppingItem(String id) async {
-    _shoppingItems.removeWhere((i) => i.id == id);
+    final current = _findListContainingItem(id);
+    if (current == null) return;
+    final updated = current.copyWith(
+      items: current.items.where((i) => i.id != id).toList(),
+    );
+    _replaceShoppingList(updated);
     await _saveData();
     notifyListeners();
-    _syncService.deleteShoppingItem(id).catchError((_) {});
+    _syncService.saveShoppingList(updated).catchError((_) {});
   }
 
-  Future<void> restoreShoppingItem(ShoppingItemModel item, {int? index}) async {
-    if (index != null && index >= 0 && index <= _shoppingItems.length) {
-      _shoppingItems.insert(index, item);
+  Future<void> restoreShoppingItem(ShoppingItemModel item,
+      {int? index}) async {
+    final current = await _ensureActiveList();
+    final restored = List<ShoppingItemModel>.from(current.items);
+    if (index != null && index >= 0 && index <= restored.length) {
+      restored.insert(index, item);
     } else {
-      _shoppingItems.add(item);
+      restored.add(item);
     }
+    final updated = current.copyWith(items: restored);
+    _replaceShoppingList(updated);
     await _saveData();
     notifyListeners();
-    _syncService.saveShoppingItem(item).catchError((_) {});
+    _syncService.saveShoppingList(updated).catchError((_) {});
   }
 
-  Future<void> updateShoppingItem(ShoppingItemModel updated) async {
-    final idx = _shoppingItems.indexWhere((i) => i.id == updated.id);
-    if (idx == -1) return;
-    _shoppingItems[idx] = updated;
+  Future<void> updateShoppingItem(ShoppingItemModel updatedItem) async {
+    final current = _findListContainingItem(updatedItem.id);
+    if (current == null) return;
+    final items = [
+      for (final i in current.items)
+        i.id == updatedItem.id ? updatedItem : i,
+    ];
+    final updated = current.copyWith(items: items);
+    _replaceShoppingList(updated);
     await _saveData();
     notifyListeners();
-    _syncService.saveShoppingItem(updated).catchError((_) {});
+    _syncService.saveShoppingList(updated).catchError((_) {});
   }
 
   Future<void> checkoutShoppingCart({
     required bool chargeToOpenAccount,
     String? openAccountName,
   }) async {
-    final checked = _shoppingItems.where((i) => i.isChecked).toList();
-    final itemsToProcess = checked.isNotEmpty ? checked : _shoppingItems;
+    final current = activeShoppingList;
+    if (current == null) return;
+
+    final checked = current.items.where((i) => i.isChecked).toList();
+    final itemsToProcess = checked.isNotEmpty ? checked : current.items;
     if (itemsToProcess.isEmpty) return;
 
     final total = itemsToProcess.fold(0.0, (s, i) => s + i.subtotal);
@@ -1699,12 +1828,14 @@ class FinanceProvider extends ChangeNotifier {
       );
     }
 
-    for (final item in itemsToProcess) {
-      _shoppingItems.removeWhere((i) => i.id == item.id);
-      _syncService.deleteShoppingItem(item.id).catchError((_) {});
-    }
+    final processedIds = itemsToProcess.map((i) => i.id).toSet();
+    final remaining =
+        current.items.where((i) => !processedIds.contains(i.id)).toList();
+    final updated = current.copyWith(items: remaining);
+    _replaceShoppingList(updated);
     await _saveData();
     notifyListeners();
+    _syncService.saveShoppingList(updated).catchError((_) {});
   }
 
   // --- SINCRONIZACIÓN CON FIREBASE EN LA NUBE ---
@@ -1743,9 +1874,15 @@ class FinanceProvider extends ChangeNotifier {
               _antExpenses;
           _creditCards = (cloudData['creditCards'] as List<CreditCardModel>?) ??
               _creditCards;
-          _shoppingItems =
-              (cloudData['shoppingItems'] as List<ShoppingItemModel>?) ??
-                  _shoppingItems;
+          if (cloudData['shoppingLists'] != null) {
+            _shoppingLists =
+                cloudData['shoppingLists'] as List<ShoppingListModel>? ??
+                    _shoppingLists;
+            if (_shoppingLists.isNotEmpty &&
+                !_shoppingLists.any((l) => l.id == _activeShoppingListId)) {
+              _activeShoppingListId = _shoppingLists.first.id;
+            }
+          }
           _sharedConfig = (cloudData['sharedConfig'] as SharedExpenseConfig?) ??
               _sharedConfig;
 
@@ -1784,7 +1921,7 @@ class FinanceProvider extends ChangeNotifier {
         budgetCategories: _budgetCategories,
         antExpenses: _antExpenses,
         creditCards: _creditCards,
-        shoppingItems: _shoppingItems,
+        shoppingLists: _shoppingLists,
         activeModules: _activeModules,
         onboardingCompleted: _onboardingCompleted,
         openAccountNames: _openAccountNames,
@@ -1833,7 +1970,10 @@ class FinanceProvider extends ChangeNotifier {
     await prefs.setString(
         'creditCards_v2', jsonEncode(_creditCards.map((e) => e.toJson()).toList()));
     await prefs.setString(
-        'shoppingItems_v2', jsonEncode(_shoppingItems.map((e) => e.toJson()).toList()));
+        'shoppingLists_v3',
+        jsonEncode(_shoppingLists.map((e) => e.toJson()).toList()));
+    await prefs.setString('activeShoppingListId_v1', _activeShoppingListId);
+    await prefs.remove('shoppingItems_v2');
     if (_lastLocalSaveTime != null) {
       await prefs.setString(
           'lastLocalSaveTime', _lastLocalSaveTime!.toIso8601String());
@@ -1883,6 +2023,8 @@ class FinanceProvider extends ChangeNotifier {
     final antRaw = prefs.getString('antExpenses_v2');
     final cardRaw = prefs.getString('creditCards_v2');
     final shopRaw = prefs.getString('shoppingItems_v2');
+    final shopListsRaw = prefs.getString('shoppingLists_v3');
+    final shopListsActiveRaw = prefs.getString('activeShoppingListId_v1');
 
     final themeRaw = prefs.getString('themeMode');
     final localTimeRaw = prefs.getString('lastLocalSaveTime');
@@ -1961,9 +2103,36 @@ class FinanceProvider extends ChangeNotifier {
       final List list = jsonDecode(cardRaw);
       _creditCards = list.map((e) => CreditCardModel.fromJson(e)).toList();
     }
-    if (shopRaw != null) {
+    if (shopListsRaw != null) {
+      final List list = jsonDecode(shopListsRaw);
+      _shoppingLists = list
+          .map((e) =>
+              ShoppingListModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      _activeShoppingListId = shopListsActiveRaw ??
+          (_shoppingLists.isNotEmpty ? _shoppingLists.first.id : '');
+      if (_shoppingLists.isNotEmpty &&
+          !_shoppingLists.any((l) => l.id == _activeShoppingListId)) {
+        _activeShoppingListId = _shoppingLists.first.id;
+      }
+    } else if (shopRaw != null) {
       final List list = jsonDecode(shopRaw);
-      _shoppingItems = list.map((e) => ShoppingItemModel.fromJson(e)).toList();
+      final legacy = list
+          .map((e) =>
+              ShoppingItemModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      if (legacy.isNotEmpty) {
+        _shoppingLists = [
+          ShoppingListModel(
+            id: _uuid.v4(),
+            name: 'Mi lista',
+            createdAt: DateTime.now(),
+            items: legacy,
+          ),
+        ];
+        _activeShoppingListId = _shoppingLists.first.id;
+        await _saveDataLocallyOnly();
+      }
     }
 
     _isLoading = false;
@@ -1987,7 +2156,8 @@ class FinanceProvider extends ChangeNotifier {
     _budgetCategories = [];
     _antExpenses = [];
     _creditCards = [];
-    _shoppingItems = [];
+    _shoppingLists = [];
+    _activeShoppingListId = '';
     _sharedConfig = SharedExpenseConfig();
     _openAccountNames = ['Comercio Local'];
     _selectedOpenAccount = 'Comercio Local';

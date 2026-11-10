@@ -2928,6 +2928,11 @@ class ShoppingListModuleView extends StatelessWidget {
         title: const Text('Lista de Compras / Presupuesto'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.playlist_add, color: AppTheme.primaryTeal),
+            tooltip: 'Crear nueva lista de compras',
+            onPressed: () => _showNewShoppingListDialog(context, provider),
+          ),
+          IconButton(
             icon: const Icon(Icons.table_chart, color: Color(0xFF0F9D58)),
             tooltip: 'Exportar Plan (Google Sheets / Excel)',
             onPressed: () => ExportOptionsSheet.show(context),
@@ -2949,6 +2954,8 @@ class ShoppingListModuleView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildShoppingListSelector(context, provider),
+            const SizedBox(height: 12),
             Card(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
@@ -3033,12 +3040,16 @@ class ShoppingListModuleView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             if (provider.shoppingItems.isEmpty)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(28),
                   child: Center(
                     child: Text(
-                        'Tu lista de compras está vacía. Agrega productos para calcular cuánto gastarás antes de ir a pagar.'),
+                      provider.shoppingLists.isEmpty
+                          ? 'Aún no tienes ninguna lista de compras. Crea la primera con el botón "+ Nueva lista" (en el AppBar o junto a la última).'
+                          : 'Tu lista de compras está vacía. Agrega productos para calcular cuánto gastarás antes de ir a pagar.',
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               )
@@ -3163,6 +3174,196 @@ class ShoppingListModuleView extends StatelessWidget {
         label: const Text('Agregar Producto'),
       ),
     );
+  }
+
+  Widget _buildShoppingListSelector(
+      BuildContext context, FinanceProvider provider) {
+    final theme = Theme.of(context);
+    final active = provider.activeShoppingList;
+    final activeId = active?.id;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.playlist_add_check_circle_outlined,
+                    color: AppTheme.primaryTeal),
+                const SizedBox(width: 8),
+                const Text('Mis Listas de Compras',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Text(
+                  '${provider.shoppingLists.length} listas',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final list in provider.shoppingLists)
+                  InputChip(
+                    label: Text(list.name),
+                    selected: list.id == activeId,
+                    selectedColor:
+                        AppTheme.primaryTeal.withValues(alpha: 0.25),
+                    avatar: CircleAvatar(
+                      backgroundColor:
+                          AppTheme.primaryTeal.withValues(alpha: 0.15),
+                      child: Text(
+                        '${list.items.length}',
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    onPressed: () =>
+                        provider.setActiveShoppingList(list.id),
+                    onDeleted: () => _showDeleteShoppingListDialog(
+                        context, provider, list),
+                    deleteButtonTooltipMessage:
+                        'Eliminar lista "${list.name}"',
+                  ),
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 18),
+                  label: const Text('Nueva lista'),
+                  onPressed: () =>
+                      _showNewShoppingListDialog(context, provider),
+                ),
+              ],
+            ),
+            if (active != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.check_circle,
+                      size: 16, color: AppTheme.primaryTeal),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Editando: ${active.name}',
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.drive_file_rename_outline, size: 16),
+                    label: const Text('Renombrar'),
+                    onPressed: () => _showRenameShoppingListDialog(
+                        context, provider, active),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNewShoppingListDialog(
+      BuildContext context, FinanceProvider provider) {
+    final nameCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nueva lista de compras'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Nombre de la lista',
+            hintText: 'Ej: Supermercado, Farmacia, Home Depot...',
+            prefixIcon: Icon(Icons.playlist_add_check),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final n = nameCtrl.text.trim();
+              provider.createShoppingList(n.isEmpty ? 'Nueva lista' : n);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Crear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameShoppingListDialog(BuildContext context,
+      FinanceProvider provider, ShoppingListModel list) {
+    final nameCtrl = TextEditingController(text: list.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Renombrar lista'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Nuevo nombre',
+            prefixIcon: Icon(Icons.drive_file_rename_outline),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              provider.renameShoppingList(list.id, nameCtrl.text);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteShoppingListDialog(BuildContext context,
+      FinanceProvider provider, ShoppingListModel list) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar lista de compras?'),
+        content: Text(
+            'Se eliminará la lista "${list.name}" y sus ${list.items.length} producto(s). Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style:
+                FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      provider.deleteShoppingList(list.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lista "${list.name}" eliminada')),
+        );
+      }
+    }
   }
 
   void _showAddShoppingItemDialog(

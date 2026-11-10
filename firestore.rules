@@ -1,4 +1,4 @@
-rules_version = '2';
+﻿rules_version = '2';
 
 // ===============================================================
 // Assumed Data Model
@@ -196,6 +196,15 @@ rules_version = '2';
 //   - estimatedPrice: number (required, non-negative, <= 100,000,000,000)
 //   - quantity: int/number (required, 1..10000)
 //   - isChecked: bool (required)
+//
+// 17. Shopping Lists (Module 10)
+// Collection: /users/{vaultId}/shopping_lists/{listId}
+// Document ID: listId (UUID string)
+// Fields:
+//   - id: string (required, 1-128 chars, immutable, matches listId)
+//   - name: string (required, 1-150 chars)
+//   - createdAt: string (required, ISO 8601 string, 10-64 chars)
+//   - items: list (required, <= 500 entries; each entry mirrors ShoppingItem shape)
 //
 // ===============================================================
 
@@ -461,6 +470,16 @@ service cloud.firestore {
              data.isChecked is bool;
     }
 
+    // Validator for shopping list documents (Module 10)
+    function isValidShoppingList(data) {
+      return data.keys().hasOnly(['id', 'name', 'createdAt', 'items']) &&
+             data.keys().hasAll(['id', 'name', 'createdAt', 'items']) &&
+             data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+             data.createdAt is string && data.createdAt.size() >= 10 && data.createdAt.size() <= 64 &&
+             data.items is list && data.items.size() <= 500;
+    }
+
     // ===============================================================
     // QR Pairing Sessions Rules (/pairing_sessions/{sessionCode})
     // ===============================================================
@@ -652,6 +671,18 @@ service cloud.firestore {
                          request.resource.data.id == itemId;
         allow update: if isAuthenticated() &&
                          isValidShoppingItem(request.resource.data) &&
+                         request.resource.data.id == resource.data.id;
+        allow delete: if isAuthenticated();
+      }
+
+      // 15. Shopping Lists Collection (Module 10)
+      match /shopping_lists/{listId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+                         isValidShoppingList(request.resource.data) &&
+                         request.resource.data.id == listId;
+        allow update: if isAuthenticated() &&
+                         isValidShoppingList(request.resource.data) &&
                          request.resource.data.id == resource.data.id;
         allow delete: if isAuthenticated();
       }

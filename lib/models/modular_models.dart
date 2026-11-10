@@ -565,3 +565,58 @@ class ShoppingItemModel {
         isChecked: (json['isChecked'] as bool?) ?? false,
       );
 }
+
+/// Módulo 10: Lista de Compras — colección de artículos guardables.
+/// Permite al usuario crear, guardar y cambiar entre varias listas
+/// de compras / supermercado en lugar de una sola lista global.
+class ShoppingListModel {
+  final String id;
+  final String name;
+  final DateTime createdAt;
+  final List<ShoppingItemModel> items;
+
+  ShoppingListModel({
+    required this.id,
+    required this.name,
+    required this.createdAt,
+    this.items = const [],
+  });
+
+  double get subtotal => items.fold(0.0, (s, i) => s + i.subtotal);
+
+  double get checkedSubtotal =>
+      items.where((i) => i.isChecked).fold(0.0, (s, i) => s + i.subtotal);
+
+  ShoppingListModel copyWith({
+    String? name,
+    List<ShoppingItemModel>? items,
+  }) {
+    return ShoppingListModel(
+      id: id,
+      name: name ?? this.name,
+      createdAt: createdAt,
+      items: items ?? this.items,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'createdAt': createdAt.toIso8601String(),
+        'items': items.map((e) => e.toJson()).toList(),
+      };
+
+  factory ShoppingListModel.fromJson(Map<String, dynamic> json) {
+    final rawItems = (json['items'] as List?) ?? const [];
+    return ShoppingListModel(
+      id: json['id'] as String,
+      name: (json['name'] as String?) ?? 'Lista de compras',
+      createdAt: DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
+          DateTime.now(),
+      items: rawItems
+          .map((e) =>
+              ShoppingItemModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+    );
+  }
+}
