@@ -30,6 +30,20 @@ class DashboardView extends StatelessWidget {
     // Calcular datos de vencimientos próximos (próximos 7 días)
     final upcomingItems = _getUpcomingMaturities(provider);
 
+    // ¿Hay módulos activos en cada categoría? (para ocultar las tarjetas de
+    // hub vacías en el dashboard)
+    final anyCompromiso = [
+      AppModuleId.loans,
+      AppModuleId.openAccounts,
+      AppModuleId.creditCards,
+      AppModuleId.receivables,
+    ].any(provider.isModuleActive);
+    final anyPlan = [
+      AppModuleId.savingsGoals,
+      AppModuleId.sharedExpenses,
+      AppModuleId.subscriptions,
+    ].any(provider.isModuleActive);
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
@@ -96,12 +110,6 @@ class DashboardView extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.widgets_outlined,
-                              color: AppTheme.primaryTeal),
-                          tooltip: 'Catálogo de Módulos (Arma tu Plan)',
-                          onPressed: () => onNavigateToModule?.call('modules_hub'),
-                        ),
                         IconButton(
                           icon: const Icon(Icons.table_chart,
                               color: Color(0xFF0F9D58)),
@@ -182,28 +190,15 @@ class DashboardView extends StatelessWidget {
             ],
 
             // 5. ACCESOS RÁPIDOS A LOS HUBS CONSOLIDADOS
-            const Text(
-              'Gestión Financiera Centralizada',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            LayoutBuilder(
+            if (anyCompromiso || anyPlan) ...[
+              const Text(
+                'Gestión Financiera Centralizada',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 600;
-                final compromisoModules = [
-                  AppModuleId.loans,
-                  AppModuleId.openAccounts,
-                  AppModuleId.creditCards,
-                  AppModuleId.receivables,
-                ];
-                final anyCompromiso =
-                    compromisoModules.any(provider.isModuleActive);
-                final planModules = [
-                  AppModuleId.savingsGoals,
-                  AppModuleId.sharedExpenses,
-                  AppModuleId.subscriptions,
-                ];
-                final anyPlan = planModules.any(provider.isModuleActive);
 
                 String compromisoBadge;
                 if (provider.isModuleActive(AppModuleId.loans)) {
@@ -261,22 +256,11 @@ class DashboardView extends StatelessWidget {
                           onTap: () => onNavigateToModule?.call('plans_hub'),
                         ),
                       ),
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
-                      child: _buildHubNavigationCard(
-                        title: 'Catálogo de Módulos',
-                        subtitle:
-                            'Personaliza tu plan activando o desactivando los 10 módulos de la app según tus necesidades.',
-                        icon: Icons.widgets_outlined,
-                        color: AppTheme.primaryTeal,
-                        badge: '${provider.activeModules.length + 1} Módulos Activos',
-                        onTap: () => onNavigateToModule?.call('modules_hub'),
-                      ),
-                    ),
                   ],
                 );
               },
             ),
+            ],
           ],
         ),
       ),

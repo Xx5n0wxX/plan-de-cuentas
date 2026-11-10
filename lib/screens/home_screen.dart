@@ -116,6 +116,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _selectedRoute = routeId);
   }
 
+  /// pestañas principales (Fase 5): Inicio / Flujo / Deudas / Metas / Ajustes
+  static const List<String> _primaryTabRoutes = [
+    'dashboard',
+    AppModuleId.monthlyFlow,
+    'debts_hub',
+    'plans_hub',
+    'settings',
+  ];
+
+  /// rutas extra aceptadas sin ser pestañas (ej. catálogo lanzado desde Ajustes)
+  static const List<String> _extraRoutes = ['modules_hub'];
+
+  /// índice de la pestaña que resalta la ruta (home, flujo, hubs y settings)
+  int _tabIndexForRoute(String route) {
+    if (route == 'dashboard') return 0;
+    if (route == AppModuleId.monthlyFlow ||
+        route == AppModuleId.dailyBudget ||
+        route == AppModuleId.shoppingList) {
+      return 1;
+    }
+    if (route == 'debts_hub' ||
+        route == AppModuleId.loans ||
+        route == AppModuleId.openAccounts ||
+        route == AppModuleId.creditCards ||
+        route == AppModuleId.receivables) {
+      return 2;
+    }
+    if (route == 'plans_hub' ||
+        route == AppModuleId.savingsGoals ||
+        route == AppModuleId.sharedExpenses ||
+        route == AppModuleId.subscriptions) {
+      return 3;
+    }
+    return 4; // 'settings' y 'modules_hub'
+  }
+
   Widget _buildScreenForRoute(String routeId) {
     switch (routeId) {
       case 'dashboard':
@@ -167,16 +203,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // Rutas base para escritorio
-    final desktopRoutes = <String>[
-      'dashboard',
-      'debts_hub',
-      'plans_hub',
-      'modules_hub',
-      'settings',
-    ];
-
-    if (!desktopRoutes.contains(_selectedRoute) &&
+    if (!_primaryTabRoutes.contains(_selectedRoute) &&
+        !_extraRoutes.contains(_selectedRoute) &&
         !AppModuleMeta.catalog.any((m) => m.id == _selectedRoute)) {
       _selectedRoute = 'dashboard';
     }
@@ -190,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     if (isDesktop) {
-      final selectedIdx = desktopRoutes.indexOf(_selectedRoute);
+      final selectedIdx = _tabIndexForRoute(_selectedRoute);
       return Scaffold(
         body: Row(
           children: [
@@ -201,9 +229,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 child: IntrinsicHeight(
                   child: NavigationRail(
-                    selectedIndex: selectedIdx < 0 ? 0 : selectedIdx,
+                    selectedIndex: selectedIdx,
                     onDestinationSelected: (index) =>
-                        _navigateToRoute(desktopRoutes[index]),
+                        _navigateToRoute(_primaryTabRoutes[index]),
                     labelType: NavigationRailLabelType.all,
                     leading: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -234,22 +262,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         label: Text('Inicio'),
                       ),
                       const NavigationRailDestination(
-                        icon: Icon(Icons.account_balance_outlined),
-                        selectedIcon: Icon(Icons.account_balance),
-                        label: Text('Compromisos'),
+                        icon: Icon(Icons.payments_outlined),
+                        selectedIcon: Icon(Icons.payments),
+                        label: Text('Flujo'),
                       ),
                       const NavigationRailDestination(
-                        icon: Icon(Icons.savings_outlined),
-                        selectedIcon: Icon(Icons.savings),
-                        label: Text('Metas'),
+                        icon: Icon(Icons.account_balance_outlined),
+                        selectedIcon: Icon(Icons.account_balance),
+                        label: Text('Deudas'),
                       ),
-                      NavigationRailDestination(
-                        icon: Badge(
-                          label: Text('${provider.activeModules.length + 1}'),
-                          child: const Icon(Icons.widgets_outlined),
-                        ),
-                        selectedIcon: const Icon(Icons.widgets),
-                        label: const Text('Módulos'),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.rocket_launch_outlined),
+                        selectedIcon: Icon(Icons.rocket_launch),
+                        label: Text('Metas'),
                       ),
                       const NavigationRailDestination(
                         icon: Icon(Icons.settings_outlined),
@@ -270,41 +295,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // DISEÑO MÓVIL: 5 Pestañas Principales + Botón Flotante Central (+)
-    final mobilePrimaryRoutes = <String>[
-      'dashboard',
-      'debts_hub',
-      'plans_hub',
-      'modules_hub',
-      'settings',
-    ];
-
-    int mobileIndex = mobilePrimaryRoutes.indexOf(_selectedRoute);
-    if (mobileIndex == -1) {
-      if (_selectedRoute == AppModuleId.loans ||
-          _selectedRoute == AppModuleId.openAccounts ||
-          _selectedRoute == AppModuleId.creditCards ||
-          _selectedRoute == AppModuleId.receivables) {
-        mobileIndex = 1; // Compromisos
-      } else if (_selectedRoute == AppModuleId.savingsGoals ||
-          _selectedRoute == AppModuleId.sharedExpenses ||
-          _selectedRoute == AppModuleId.subscriptions) {
-        mobileIndex = 2; // Metas
-      } else if (_selectedRoute == AppModuleId.monthlyFlow ||
-          _selectedRoute == AppModuleId.dailyBudget ||
-          _selectedRoute == AppModuleId.shoppingList) {
-        mobileIndex = 3; // Módulos
-      } else {
-        mobileIndex = 0; // Inicio
-      }
-    }
+    // DISEÑO MÓVIL: 4 pestañas de categoría + Ajustes
+    final mobileIndex = _tabIndexForRoute(_selectedRoute);
 
     return Scaffold(
       body: _buildScreenForRoute(_selectedRoute),
       bottomNavigationBar: NavigationBar(
         selectedIndex: mobileIndex,
         onDestinationSelected: (idx) =>
-            _navigateToRoute(mobilePrimaryRoutes[idx]),
+            _navigateToRoute(_primaryTabRoutes[idx]),
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
@@ -312,22 +311,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             label: 'Inicio',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.account_balance_outlined),
-            selectedIcon: Icon(Icons.account_balance),
-            label: 'Compromisos',
+            icon: Icon(Icons.payments_outlined),
+            selectedIcon: Icon(Icons.payments),
+            label: 'Flujo',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.savings_outlined),
-            selectedIcon: Icon(Icons.savings),
-            label: 'Metas',
+            icon: Icon(Icons.account_balance_outlined),
+            selectedIcon: Icon(Icons.account_balance),
+            label: 'Deudas',
           ),
-          NavigationDestination(
-            icon: Badge(
-              label: Text('${provider.activeModules.length + 1}'),
-              child: const Icon(Icons.widgets_outlined),
-            ),
-            selectedIcon: const Icon(Icons.widgets),
-            label: 'Módulos',
+          const NavigationDestination(
+            icon: Icon(Icons.rocket_launch_outlined),
+            selectedIcon: Icon(Icons.rocket_launch),
+            label: 'Metas',
           ),
           const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
