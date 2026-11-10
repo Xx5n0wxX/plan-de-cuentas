@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_shopping"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_shopping_short"
+        android:shortcutLongLabel="@string/shortcut_shopping_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.diegoplan.plan_de_cuentas"
+            android:targetClass="com.diegoplan.plan_de_cuentas.QuickAddOverlayActivity">
+            <extra android:name="quick_add_action_id" android:value="add_shopping_item" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_transaction"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_trans_short"
+        android:shortcutLongLabel="@string/shortcut_trans_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.diegoplan.plan_de_cuentas"
+            android:targetClass="com.diegoplan.plan_de_cuentas.QuickAddOverlayActivity">
+            <extra android:name="quick_add_action_id" android:value="add_transaction" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_fiado"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_fiado_short"
+        android:shortcutLongLabel="@string/shortcut_fiado_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.diegoplan.plan_de_cuentas"
+            android:targetClass="com.diegoplan.plan_de_cuentas.QuickAddOverlayActivity">
+            <extra android:name="quick_add_action_id" android:value="add_fiado" />
+        </intent>
+    </shortcut>
+</shortcuts>

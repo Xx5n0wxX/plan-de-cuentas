@@ -2,4 +2,10 @@
 <resources>
     <string name="quick_add_title">Ingreso rápido</string>
     <string name="quick_add_desc">Acceso directo para registrar en Plan de Cuentas sin entrar a la app</string>
+    <string name="shortcut_shopping_short">Compras</string>
+    <string name="shortcut_shopping_long">Agregar a Lista de Compras</string>
+    <string name="shortcut_trans_short">Transacción</string>
+    <string name="shortcut_trans_long">Nueva Transacción Rápida</string>
+    <string name="shortcut_fiado_short">Fiado</string>
+    <string name="shortcut_fiado_long">Registrar en Libreta / Fiado</string>
 </resources>

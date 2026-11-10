@@ -38,8 +38,8 @@ class AppVersionInfo {
 }
 
 class AppUpdateService {
-  static const String currentVersion = '2.7.2';
-  static const int currentBuildNumber = 263;
+  static const String currentVersion = '2.7.3';
+  static const int currentBuildNumber = 264;
   static const String versionJsonUrl =
       'https://plan-de-cuentas-45670.web.app/version.json';
 

@@ -1,8 +1,8 @@
 {
-  "version": "2.7.2",
-  "buildNumber": 263,
+  "version": "2.7.3",
+  "buildNumber": 264,
   "forceUpdate": false,
-  "changelog": "Fase 2: Widget nativo de ingreso rápido 1x1 optimizado para launcher y sincronización de datos\nFase 4: Múltiples listas de compras sincronizadas con Firestore\nFase 5: Barra inferior por categoría y catálogo en Ajustes",
+  "changelog": "Fase 2: Widget 1x1 con CATEGORY_DEFAULT e icono rasterizado garantizado en el launcher + App Shortcuts directos al mantener presionado el icono de la app",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

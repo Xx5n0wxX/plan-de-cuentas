@@ -10,10 +10,10 @@
 
     <ImageView
         android:id="@+id/widget_icon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         android:contentDescription="@string/quick_add_title"
-        android:src="@android:drawable/ic_input_add" />
+        android:src="@mipmap/ic_launcher" />
 
     <TextView
         android:id="@+id/widget_label"
