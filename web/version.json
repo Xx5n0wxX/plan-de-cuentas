@@ -1,8 +1,8 @@
 {
-  "version": "2.6.0",
-  "buildNumber": 260,
+  "version": "2.7.0",
+  "buildNumber": 261,
   "forceUpdate": false,
-  "changelog": "• ¡Actualizaciones Instantáneas Over-The-Air (Shorebird OTA ⚡)! Parches en 1-2 segundos sin reinstalar el APK.\n• Integración nativa del motor de actualización silenciosa en segundo plano sin permisos invasivos de Android.\n• Acceso directo al Catálogo de Módulos (Arma tu Plan) desde la barra inferior móvil, Inicio, Ajustes y Acciones Rápidas (+).\n• Panel Ejecutivo de Inicio con Saldo Disponible Real y Carrusel de Vencimientos de la semana.\n• Hub de Compromisos y Deudas y Hub de Metas y Pareja.",
+  "changelog": "⦗ Parches OTA y widget nativo\n⦘ Fase 2: widget nativo de ingreso rápido por funcionalidad (+overlay instantáneo)\n⦘ Fase 4: Listas de Compras múltiples con migración + sync Firestore\n⦘ Fase 5: barra inferior por categoría + catálogo de módulos en Ajustes\n⦘ Inicio limpio sin FABs ni compras rápidas inline (Fase 1+3)\n",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }
