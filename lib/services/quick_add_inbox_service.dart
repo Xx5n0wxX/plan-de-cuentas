@@ -23,18 +23,42 @@ class QuickAddInboxService {
   static const String _metaFileName = 'quick_add_meta.json';
   static const int _expectedVersion = 1;
 
+  /// Obtiene los directorios candidatos donde se comparten datos entre Kotlin y Flutter
+  /// (en Android: filesDir = getApplicationSupportDirectory, y getApplicationDocumentsDirectory).
+  static Future<List<Directory>> _targetDirs() async {
+    final dirs = <Directory>[];
+    try {
+      dirs.add(await getApplicationSupportDirectory());
+    } catch (_) {}
+    try {
+      dirs.add(await getApplicationDocumentsDirectory());
+    } catch (_) {}
+    return dirs;
+  }
+
   /// Lee las entradas pendientes. Si hay cualquier problema de formato o
   /// lectura devuelve una lista vacía. Nunca lanza excepción (seguro en
   /// entornos headless como unit tests sin path_provider).
   static Future<List<QuickAddEntry>> readPending() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_pendingFileName');
-      if (!await file.exists()) return [];
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) return [];
-      final decoded = jsonDecode(raw);
-      return _decodeEntries(decoded);
+      final dirs = await _targetDirs();
+      final allEntries = <QuickAddEntry>[];
+      final seenQueued = <dynamic>{};
+
+      for (final dir in dirs) {
+        final file = File('${dir.path}/$_pendingFileName');
+        if (!await file.exists()) continue;
+        final raw = await file.readAsString();
+        if (raw.trim().isEmpty) continue;
+        final decoded = jsonDecode(raw);
+        final entries = _decodeEntries(decoded);
+        for (final entry in entries) {
+          final q = entry.fields['queuedAt'];
+          if (q != null && !seenQueued.add(q)) continue;
+          allEntries.add(entry);
+        }
+      }
+      return allEntries;
     } catch (e) {
       debugPrint('QuickAdd: lectura de $_pendingFileName ignorada: $e');
       return [];
@@ -44,10 +68,12 @@ class QuickAddInboxService {
   /// Borra el archivo de pendientes (invocado tras aplicar las entradas).
   static Future<void> clearPending() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_pendingFileName');
-      if (await file.exists()) {
-        await file.delete();
+      final dirs = await _targetDirs();
+      for (final dir in dirs) {
+        final file = File('${dir.path}/$_pendingFileName');
+        if (await file.exists()) {
+          await file.delete();
+        }
       }
     } catch (e) {
       debugPrint('QuickAdd: no se pudo borrar $_pendingFileName: $e');
@@ -60,14 +86,17 @@ class QuickAddInboxService {
   /// pedirá abrir la app primero. Nunca lanza excepción.
   static Future<void> writeMeta(Map<String, dynamic> meta) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_metaFileName');
-      await file.writeAsString(jsonEncode({
+      final dirs = await _targetDirs();
+      final payload = jsonEncode({
         'version': _expectedVersion,
         'cards': meta['cards'] ?? const [],
         'goals': meta['goals'] ?? const [],
         'antCategories': meta['antCategories'] ?? const [],
-      }));
+      });
+      for (final dir in dirs) {
+        final file = File('${dir.path}/$_metaFileName');
+        await file.writeAsString(payload);
+      }
     } catch (e) {
       debugPrint('QuickAdd meta: no se pudo escribir $_metaFileName: $e');
     }

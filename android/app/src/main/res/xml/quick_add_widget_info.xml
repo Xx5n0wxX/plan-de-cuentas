@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/quick_add_desc"
-    android:minWidth="110dp"
-    android:minHeight="110dp"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
     android:targetCellWidth="1"
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
@@ -10,4 +10,5 @@
     android:configure="com.diegoplan.plan_de_cuentas.QuickAddConfigActivity"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
+    android:previewLayout="@layout/quick_add_widget"
     android:previewImage="@drawable/quick_add_widget_bg" />

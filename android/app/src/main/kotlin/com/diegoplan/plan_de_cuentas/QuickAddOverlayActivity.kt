@@ -70,12 +70,14 @@ class QuickAddOverlayActivity : Activity() {
             setBackgroundColor(Color.parseColor("#80000000"))
             setPadding(dp(16), dp(80), dp(16), dp(24))
             gravity = Gravity.CENTER_HORIZONTAL
+            setOnClickListener { finish() }
         }
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(cardBg)
             setPadding(dp(18), dp(16), dp(18), dp(16))
+            setOnClickListener { /* prevent dismissal when touching card */ }
         }
         val cardParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -307,8 +309,11 @@ class QuickAddOverlayActivity : Activity() {
     // ---------------------------------------------------------------------
 
     private fun loadMeta() {
-        val file = File(filesDir, "quick_add_meta.json")
-        if (!file.exists()) return
+        val candidates = listOf(
+            File(filesDir, "quick_add_meta.json"),
+            File(File(filesDir.parentFile, "app_flutter"), "quick_add_meta.json")
+        )
+        val file = candidates.firstOrNull { it.exists() } ?: return
         try {
             val json = JSONObject(file.readText())
             cards = pairsFrom(json.optJSONArray("cards"), "cards")
@@ -412,21 +417,26 @@ class QuickAddOverlayActivity : Activity() {
     }
 
     private fun appendPending(actionValue: String, fields: JSONObject) {
-        val file = File(filesDir, "pending_quick_add.json")
+        val candidates = listOf(
+            File(filesDir, "pending_quick_add.json"),
+            File(File(filesDir.parentFile, "app_flutter"), "pending_quick_add.json")
+        )
         val entries = JSONArray()
-        try {
-            if (file.exists()) {
-                val raw = file.readText().trim()
-                if (raw.isNotEmpty()) {
-                    val decoded = JSONObject(raw)
-                    val list = decoded.optJSONArray("entries")
-                    if (list != null) {
-                        for (i in 0 until list.length()) entries.put(list.getJSONObject(i))
+        for (f in candidates) {
+            try {
+                if (f.exists()) {
+                    val raw = f.readText().trim()
+                    if (raw.isNotEmpty()) {
+                        val decoded = JSONObject(raw)
+                        val list = decoded.optJSONArray("entries")
+                        if (list != null && list.length() > 0) {
+                            for (i in 0 until list.length()) entries.put(list.getJSONObject(i))
+                            break
+                        }
                     }
                 }
+            } catch (_: Exception) {
             }
-        } catch (_: Exception) {
-            // Archivo corrupto: no lo perdemos, lo sobreescribimos con el nuevo dato.
         }
 
         val entry = JSONObject()
@@ -442,7 +452,16 @@ class QuickAddOverlayActivity : Activity() {
         val doc = JSONObject()
         doc.put("version", 1)
         doc.put("entries", entries)
-        file.writeText(doc.toString())
+        val payload = doc.toString()
+
+        for (f in candidates) {
+            try {
+                val parent = f.parentFile
+                if (parent != null && !parent.exists()) parent.mkdirs()
+                f.writeText(payload)
+            } catch (_: Exception) {
+            }
+        }
     }
 
     private fun toast(message: String) {

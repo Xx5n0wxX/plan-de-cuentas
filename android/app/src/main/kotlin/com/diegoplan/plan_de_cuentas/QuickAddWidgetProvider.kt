@@ -26,9 +26,12 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             val actionId = intent.getStringExtra(QuickAddAction.EXTRA_ACTION_ID) ?: return
             val overlay = Intent(context, QuickAddOverlayActivity::class.java).apply {
                 putExtra(QuickAddAction.EXTRA_ACTION_ID, actionId)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-            context.startActivity(overlay)
+            try {
+                context.startActivity(overlay)
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -54,19 +57,19 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.quick_add_widget)
             views.setTextViewText(R.id.widget_label, QuickAddAction.labelOf(action))
 
-            val clickIntent = Intent(context, QuickAddWidgetProvider::class.java).apply {
-                setAction(QuickAddAction.CLICK_ACTION)
+            val overlayIntent = Intent(context, QuickAddOverlayActivity::class.java).apply {
                 putExtra(QuickAddAction.EXTRA_ACTION_ID, action)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             } else {
                 PendingIntent.FLAG_UPDATE_CURRENT
             }
-            val pending = PendingIntent.getBroadcast(
+            val pending = PendingIntent.getActivity(
                 context,
                 appWidgetId,
-                clickIntent,
+                overlayIntent,
                 flags,
             )
             views.setOnClickPendingIntent(R.id.widget_root, pending)

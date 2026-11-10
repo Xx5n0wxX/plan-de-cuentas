@@ -34,28 +34,28 @@
         </activity>
         <!-- QuickAdd widget: ingreso rápido sin entrar a la app -->
         <receiver
-            android:name=".QuickAddWidgetProvider"
+            android:name="com.diegoplan.plan_de_cuentas.QuickAddWidgetProvider"
             android:label="@string/quick_add_title"
+            android:icon="@mipmap/ic_launcher"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.diegoplan.plan_de_cuentas.QUICK_ADD_WIDGET_CLICK" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/quick_add_widget_info" />
         </receiver>
         <activity
-            android:name=".QuickAddConfigActivity"
-            android:theme="@style/NormalTheme"
+            android:name="com.diegoplan.plan_de_cuentas.QuickAddConfigActivity"
+            android:theme="@style/TranslucentDialogTheme"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".QuickAddOverlayActivity"
-            android:theme="@style/NormalTheme"
+            android:name="com.diegoplan.plan_de_cuentas.QuickAddOverlayActivity"
+            android:theme="@style/TranslucentDialogTheme"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <!-- Don't delete the meta-data below.

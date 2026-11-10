@@ -1,8 +1,8 @@
 {
-  "version": "2.7.1",
-  "buildNumber": 262,
+  "version": "2.7.2",
+  "buildNumber": 263,
   "forceUpdate": false,
-  "changelog": "Fase 2: widget nativo de ingreso rápido por funcionalidad (overlay instantáneo)\nWidget: añadida etiqueta al provider y vista previa propia",
+  "changelog": "Fase 2: Widget nativo de ingreso rápido 1x1 optimizado para launcher y sincronización de datos\nFase 4: Múltiples listas de compras sincronizadas con Firestore\nFase 5: Barra inferior por categoría y catálogo en Ajustes",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

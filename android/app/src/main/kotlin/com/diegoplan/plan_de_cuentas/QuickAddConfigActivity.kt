@@ -27,11 +27,20 @@ class QuickAddConfigActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         // Resultado por defecto en cancelado por si el usuario presiona atrás.
-        appWidgetId = intent.getIntExtra(
+        setResult(RESULT_CANCELED)
+
+        appWidgetId = intent?.extras?.getInt(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
             AppWidgetManager.INVALID_APPWIDGET_ID,
-        )
-        setResult(RESULT_CANCELED)
+        ) ?: intent?.getIntExtra(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID,
+        ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
+
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            finish()
+            return
+        }
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
