@@ -36,6 +36,7 @@ class QuickAddOverlayActivity : Activity() {
     private lateinit var categorySpinner: Spinner
 
     private var transactionTypeIsIncome = false
+    private var titleView: TextView? = null
     private var transactionTypeButtons: Pair<Button, Button>? = null
     private var cards: List<Pair<String, String>> = emptyList()
     private var goals: List<Pair<String, String>> = emptyList()
@@ -45,6 +46,11 @@ class QuickAddOverlayActivity : Activity() {
         super.onCreate(savedInstanceState)
         action = intent.getStringExtra(QuickAddAction.EXTRA_ACTION_ID)
             ?: QuickAddAction.ADD_SHOPPING_ITEM
+
+        val txType = intent.getStringExtra("transaction_type")
+        if (txType != null) {
+            transactionTypeIsIncome = (txType == "income")
+        }
 
         loadMeta()
 
@@ -90,11 +96,16 @@ class QuickAddOverlayActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         val title = TextView(this).apply {
-            text = QuickAddAction.labelOf(action)
+            text = if (action == QuickAddAction.ADD_TRANSACTION) {
+                if (transactionTypeIsIncome) "Nuevo Ingreso" else "Nuevo Gasto"
+            } else {
+                QuickAddAction.labelOf(action)
+            }
             setTextColor(Color.WHITE)
             textSize = 18f
             setTypeface(typeface, Typeface.BOLD)
         }
+        titleView = title
         val close = TextView(this).apply {
             text = "✕"
             setTextColor(muted)
@@ -240,12 +251,20 @@ class QuickAddOverlayActivity : Activity() {
         val btnG = Button(this).apply {
             text = "Gasto"
             isAllCaps = false
-            setOnClickListener { transactionTypeIsIncome = false; syncTypeToggle() }
+            setOnClickListener {
+                transactionTypeIsIncome = false
+                syncTypeToggle()
+                titleView?.text = "Nuevo Gasto"
+            }
         }
         val btnI = Button(this).apply {
             text = "Ingreso"
             isAllCaps = false
-            setOnClickListener { transactionTypeIsIncome = true; syncTypeToggle() }
+            setOnClickListener {
+                transactionTypeIsIncome = true
+                syncTypeToggle()
+                titleView?.text = "Nuevo Ingreso"
+            }
         }
         val half = LinearLayout.LayoutParams(0, dp(46), 1f)
         row.addView(btnG, half)

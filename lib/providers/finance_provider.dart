@@ -1939,6 +1939,7 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> _saveData() async {
     _lastLocalSaveTime = DateTime.now();
     await _saveDataLocallyOnly();
+    await _writeWidgetSnapshot();
   }
 
   Future<void> _saveDataLocallyOnly() async {
@@ -2141,6 +2142,7 @@ class FinanceProvider extends ChangeNotifier {
     // ---- QuickAdd nativo: consume pendientes + snapshot de metadatos ----
     await _consumePendingQuickAdd();
     await _writeQuickAddMetaSnapshot();
+    await _writeWidgetSnapshot();
   }
 
   // ---------------------------------------------------------------------------
@@ -2222,6 +2224,50 @@ class FinanceProvider extends ChangeNotifier {
             'name': c.name,
           }).toList(),
     });
+  }
+
+  /// Escribe el snapshot financiero para el widget rectangular de la pantalla de inicio en Android.
+  Future<void> _writeWidgetSnapshot() async {
+    try {
+      const months = [
+        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      ];
+      final now = DateTime.now();
+      final monthName = '${months[now.month - 1]} ${now.year}';
+
+      final nowTransactions = _transactions.where(
+          (tx) => tx.date.year == now.year && tx.date.month == now.month);
+      final inc = nowTransactions
+          .where((tx) => tx.type == TransactionType.income)
+          .fold(0.0, (s, tx) => s + tx.amount);
+      final exp = nowTransactions
+          .where((tx) => tx.type == TransactionType.expense)
+          .fold(0.0, (s, tx) => s + tx.amount);
+      final resSavings = isModuleActive(AppModuleId.savingsGoals)
+          ? _savingsGoals
+              .where((g) => g.reserveFromLiquidity && !g.isCompleted)
+              .fold(0.0, (s, g) => s + g.monthlyContribution)
+          : 0.0;
+      final net = inc - exp - resSavings;
+      final deficit = net < 0;
+
+      final pendingShoppingCount = activeShoppingList?.items
+              .where((i) => !i.isChecked)
+              .length ??
+          0;
+
+      await QuickAddInboxService.writeWidgetFinancialData(
+        monthName: monthName,
+        balance: CurrencyFormatter.format(net, allowPrivacy: false),
+        income: '▲ ${CurrencyFormatter.format(inc, allowPrivacy: false)}',
+        expenses: '▼ ${CurrencyFormatter.format(exp, allowPrivacy: false)}',
+        isDeficit: deficit,
+        shoppingBadge: '🛒 $pendingShoppingCount pendientes',
+      );
+    } catch (e) {
+      debugPrint('Error al escribir snapshot del widget: $e');
+    }
   }
 
   /// Deja la aplicación completamente en 0 (sin datos)

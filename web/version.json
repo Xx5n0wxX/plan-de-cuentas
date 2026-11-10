@@ -1,8 +1,8 @@
 {
-  "version": "2.7.3",
-  "buildNumber": 264,
+  "version": "2.7.4",
+  "buildNumber": 265,
   "forceUpdate": false,
-  "changelog": "Fase 2: Widget 1x1 con CATEGORY_DEFAULT e icono rasterizado garantizado en el launcher + App Shortcuts directos al mantener presionado el icono de la app",
+  "changelog": "Widget rectangular interactivo 4x2 con resumen financiero mensual (balance, ingresos, gastos, compras) y botones de acción rápida directos",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }

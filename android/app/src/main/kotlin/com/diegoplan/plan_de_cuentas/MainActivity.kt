@@ -67,6 +67,13 @@ class MainActivity : FlutterFragmentActivity() {
                 } else {
                     result.error("INVALID_PATH", "Path is empty", null)
                 }
+            } else if (call.method == "updateWidgetData") {
+                try {
+                    QuickAddWidgetProvider.updateAllWidgets(this)
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("WIDGET_UPDATE_ERROR", e.message, null)
+                }
             } else {
                 result.notImplemented()
             }

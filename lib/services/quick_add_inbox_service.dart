@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Acciones rápidas que puede despachar el widget nativo (QuickAdd).
@@ -21,7 +22,10 @@ class QuickAddInboxService {
 
   static const String _pendingFileName = 'pending_quick_add.json';
   static const String _metaFileName = 'quick_add_meta.json';
+  static const String _widgetDataFileName = 'widget_financial_data.json';
   static const int _expectedVersion = 1;
+  static const MethodChannel _updaterChannel =
+      MethodChannel('com.diegoplan.plan_de_cuentas/updater');
 
   /// Obtiene los directorios candidatos donde se comparten datos entre Kotlin y Flutter
   /// (en Android: filesDir = getApplicationSupportDirectory, y getApplicationDocumentsDirectory).
@@ -99,6 +103,42 @@ class QuickAddInboxService {
       }
     } catch (e) {
       debugPrint('QuickAdd meta: no se pudo escribir $_metaFileName: $e');
+    }
+  }
+
+  /// Escribe el snapshot financiero consumido por el widget de inicio de Android
+  /// y notifica al AppWidgetProvider mediante MethodChannel para actualizar la vista.
+  static Future<void> writeWidgetFinancialData({
+    required String monthName,
+    required String balance,
+    required String income,
+    required String expenses,
+    required bool isDeficit,
+    required String shoppingBadge,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      final dirs = await _targetDirs();
+      final payload = jsonEncode({
+        'monthName': monthName,
+        'balance': balance,
+        'income': income,
+        'expenses': expenses,
+        'isDeficit': isDeficit,
+        'shoppingBadge': shoppingBadge,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      for (final dir in dirs) {
+        final file = File('${dir.path}/$_widgetDataFileName');
+        await file.writeAsString(payload);
+      }
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          await _updaterChannel.invokeMethod('updateWidgetData');
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('QuickAdd: no se pudo escribir $_widgetDataFileName: $e');
     }
   }
 

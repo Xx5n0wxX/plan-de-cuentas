@@ -38,7 +38,7 @@
         <!-- QuickAdd widget: ingreso rápido sin entrar a la app -->
         <receiver
             android:name="com.diegoplan.plan_de_cuentas.QuickAddWidgetProvider"
-            android:label="Plan de Cuentas: Ingreso Rápido"
+            android:label="@string/quick_add_title"
             android:icon="@mipmap/ic_launcher"
             android:exported="true">
             <intent-filter>
