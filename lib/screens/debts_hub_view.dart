@@ -102,15 +102,27 @@ class _DebtsHubViewState extends State<DebtsHubView> {
     ThemeData theme,
     bool isDark,
   ) {
-    // Cálculo de deuda consolidada
+    // Cálculo de deuda consolidada (solo módulos activos)
+    final loansActive = provider.isModuleActive(AppModuleId.loans);
+    final openAccountsActive = provider.isModuleActive(AppModuleId.openAccounts);
+    final creditCardsActive = provider.isModuleActive(AppModuleId.creditCards);
+    if (!loansActive && !openAccountsActive && !creditCardsActive) {
+      return _buildAllInactiveState(context, theme, 'Compromisos y Deudas');
+    }
+
     final activeLoans =
         provider.erikaLoans.where((l) => !l.isCompleted).toList();
-    final loansDebt =
-        activeLoans.fold(0.0, (acc, loan) => acc + loan.remainingDebt);
-    final fiadoDebt = provider.openAccountNames.fold(
-        0.0, (acc, name) => acc + provider.pendingForOpenAccount(name));
-    final creditCardsDebt = provider.creditCards
-        .fold(0.0, (acc, card) => acc + card.usedAmount);
+    final loansDebt = loansActive
+        ? activeLoans.fold(0.0, (acc, loan) => acc + loan.remainingDebt)
+        : 0.0;
+    final fiadoDebt = openAccountsActive
+        ? provider.openAccountNames.fold(
+            0.0, (acc, name) => acc + provider.pendingForOpenAccount(name))
+        : 0.0;
+    final creditCardsDebt = creditCardsActive
+        ? provider.creditCards
+            .fold(0.0, (acc, card) => acc + card.usedAmount)
+        : 0.0;
     final totalOwed = loansDebt + fiadoDebt + creditCardsDebt;
 
     return Column(
@@ -207,18 +219,21 @@ class _DebtsHubViewState extends State<DebtsHubView> {
                 spacing: 12,
                 runSpacing: 6,
                 children: [
-                  _buildHeroChip(
-                    'Préstamos: ${provider.maskedCurrency(loansDebt)}',
-                    Icons.account_balance,
-                  ),
-                  _buildHeroChip(
-                    'Libretas: ${provider.maskedCurrency(fiadoDebt)}',
-                    Icons.storefront,
-                  ),
-                  _buildHeroChip(
-                    'Tarjetas: ${provider.maskedCurrency(creditCardsDebt)}',
-                    Icons.credit_card,
-                  ),
+                  if (loansActive)
+                    _buildHeroChip(
+                      'Préstamos: ${provider.maskedCurrency(loansDebt)}',
+                      Icons.account_balance,
+                    ),
+                  if (openAccountsActive)
+                    _buildHeroChip(
+                      'Libretas: ${provider.maskedCurrency(fiadoDebt)}',
+                      Icons.storefront,
+                    ),
+                  if (creditCardsActive)
+                    _buildHeroChip(
+                      'Tarjetas: ${provider.maskedCurrency(creditCardsDebt)}',
+                      Icons.credit_card,
+                    ),
                 ],
               ),
             ],
@@ -226,54 +241,53 @@ class _DebtsHubViewState extends State<DebtsHubView> {
         ),
         const SizedBox(height: 24),
 
-        // SECCIÓN 1: PRÉSTAMOS BANCARIOS Y CRÉDITOS
-        _buildSectionHeader(
-          title: 'Préstamos y Créditos Bancarios',
-          icon: Icons.account_balance,
-          color: Colors.indigo,
-          count: activeLoans.length,
-          onManage: () => widget.onOpenModule?.call(AppModuleId.loans),
-        ),
-        const SizedBox(height: 10),
-        if (!provider.isModuleActive(AppModuleId.loans))
-          _buildInactiveModuleNotice(AppModuleId.loans, 'Préstamos')
-        else if (activeLoans.isEmpty)
-          _buildEmptyCard('No tienes préstamos pendientes de pago. ¡Excelente!')
-        else
-          ...activeLoans.map((loan) => _buildLoanCard(context, provider, loan, theme)),
-        const SizedBox(height: 24),
+        // SECCIÓN 1: PRÉSTAMOS BANCARIOS Y CRÉDITOS (solo si el módulo está activo)
+        if (loansActive) ...[
+          _buildSectionHeader(
+            title: 'Préstamos y Créditos Bancarios',
+            icon: Icons.account_balance,
+            color: Colors.indigo,
+            count: activeLoans.length,
+            onManage: () => widget.onOpenModule?.call(AppModuleId.loans),
+          ),
+          const SizedBox(height: 10),
+          if (activeLoans.isEmpty)
+            _buildEmptyCard('No tienes préstamos pendientes de pago. ¡Excelente!')
+          else
+            ...activeLoans.map((loan) => _buildLoanCard(context, provider, loan, theme)),
+          const SizedBox(height: 24),
+        ],
 
-        // SECCIÓN 2: LIBRETAS DE BARRIO / FIADOS
-        _buildSectionHeader(
-          title: 'Libretas y Fiados de Barrio',
-          icon: Icons.storefront,
-          color: Colors.amber.shade800,
-          count: provider.openAccountNames.length,
-          onManage: () => widget.onOpenModule?.call(AppModuleId.openAccounts),
-        ),
-        const SizedBox(height: 10),
-        if (!provider.isModuleActive(AppModuleId.openAccounts))
-          _buildInactiveModuleNotice(AppModuleId.openAccounts, 'Libreta de Fiado')
-        else
+        // SECCIÓN 2: LIBRETAS DE BARRIO / FIADOS (solo si el módulo está activo)
+        if (openAccountsActive) ...[
+          _buildSectionHeader(
+            title: 'Libretas y Fiados de Barrio',
+            icon: Icons.storefront,
+            color: Colors.amber.shade800,
+            count: provider.openAccountNames.length,
+            onManage: () => widget.onOpenModule?.call(AppModuleId.openAccounts),
+          ),
+          const SizedBox(height: 10),
           _buildFiadoSummaryCard(context, provider, theme),
-        const SizedBox(height: 24),
+          const SizedBox(height: 24),
+        ],
 
-        // SECCIÓN 3: TARJETAS DE CRÉDITO
-        _buildSectionHeader(
-          title: 'Tarjetas de Crédito',
-          icon: Icons.credit_card,
-          color: Colors.deepPurple,
-          count: provider.creditCards.length,
-          onManage: () => widget.onOpenModule?.call(AppModuleId.creditCards),
-        ),
-        const SizedBox(height: 10),
-        if (!provider.isModuleActive(AppModuleId.creditCards))
-          _buildInactiveModuleNotice(AppModuleId.creditCards, 'Tarjetas de Crédito')
-        else if (provider.creditCards.isEmpty)
-          _buildEmptyCard('No tienes tarjetas de crédito registradas.')
-        else
-          ...provider.creditCards.map(
-              (card) => _buildCreditCardItem(context, provider, card, theme)),
+        // SECCIÓN 3: TARJETAS DE CRÉDITO (solo si el módulo está activo)
+        if (creditCardsActive) ...[
+          _buildSectionHeader(
+            title: 'Tarjetas de Crédito',
+            icon: Icons.credit_card,
+            color: Colors.deepPurple,
+            count: provider.creditCards.length,
+            onManage: () => widget.onOpenModule?.call(AppModuleId.creditCards),
+          ),
+          const SizedBox(height: 10),
+          if (provider.creditCards.isEmpty)
+            _buildEmptyCard('No tienes tarjetas de crédito registradas.')
+          else
+            ...provider.creditCards.map(
+                (card) => _buildCreditCardItem(context, provider, card, theme)),
+        ],
       ],
     );
   }
@@ -285,6 +299,11 @@ class _DebtsHubViewState extends State<DebtsHubView> {
     ThemeData theme,
     bool isDark,
   ) {
+    final receivablesActive = provider.isModuleActive(AppModuleId.receivables);
+    if (!receivablesActive) {
+      return _buildAllInactiveState(context, theme, 'Cuentas por Cobrar');
+    }
+
     final pendingReceivables =
         provider.receivables.where((r) => !r.isSettled).toList();
     final totalToCollect = pendingReceivables.fold(
@@ -395,11 +414,9 @@ class _DebtsHubViewState extends State<DebtsHubView> {
         ),
         const SizedBox(height: 10),
 
-        if (!provider.isModuleActive(AppModuleId.receivables))
-          _buildInactiveModuleNotice(
-              AppModuleId.receivables, 'Cuentas por Cobrar')
-        else if (pendingReceivables.isEmpty)
-          _buildEmptyCard('No tienes cuentas pendientes por cobrar. ¡Todo saldado!')
+        if (pendingReceivables.isEmpty)
+          _buildEmptyCard(
+              'No tienes cuentas pendientes por cobrar. ¡Todo saldado!')
         else
           ...pendingReceivables.map(
               (rec) => _buildReceivableItemCard(context, provider, rec, theme)),
@@ -954,26 +971,45 @@ class _DebtsHubViewState extends State<DebtsHubView> {
     );
   }
 
-  Widget _buildInactiveModuleNotice(String moduleId, String moduleName) {
-    return Card(
-      elevation: 0,
-      color: Colors.grey.withValues(alpha: 0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
+  /// Estado vacío para cuando la categoría completa está desactivada:
+  /// muestra un mensaje y un botón que lleva al Catálogo de Módulos.
+  Widget _buildAllInactiveState(
+    BuildContext context,
+    ThemeData theme,
+    String categoryName,
+  ) {
+    final isDark = theme.brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(top: 48, bottom: 32),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.info_outline, size: 20, color: Colors.grey),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'El módulo $moduleName está desactivado.',
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
+            Icon(
+              Icons.power_settings_new_rounded,
+              size: 48,
+              color: isDark ? Colors.white38 : Colors.black26,
             ),
-            TextButton(
+            const SizedBox(height: 16),
+            const Text(
+              'Sin módulos activos',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Activa los módulos de $categoryName desde el Catálogo de Módulos para verlos aquí.',
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
               onPressed: () => widget.onOpenModule?.call('modules_hub'),
-              child: const Text('Activar en Catálogo'),
+              icon: const Icon(Icons.widgets_outlined, size: 18),
+              label: const Text('Abrir Catálogo de Módulos'),
             ),
           ],
         ),

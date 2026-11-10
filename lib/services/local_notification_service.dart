@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../models/modular_models.dart';
 import '../providers/finance_provider.dart';
 import '../utils/currency_formatter.dart';
 
@@ -252,8 +253,9 @@ class LocalNotificationService {
     final now = DateTime.now();
     int count = 0;
 
-    // --- 1. PRÉSTAMOS Y DEUDAS EN CUOTAS ---
-    for (final loan in provider.activeErikaLoans) {
+    // --- 1. PRÉSTAMOS Y DEUDAS EN CUOTAS (solo si el módulo está activo) ---
+    if (provider.isModuleActive(AppModuleId.loans)) {
+      for (final loan in provider.activeErikaLoans) {
       if (loan.nextDueDate != null) {
         final due = loan.nextDueDate!;
         // Notificación el mismo día del vencimiento a las 09:00 AM
@@ -285,9 +287,11 @@ class LocalNotificationService {
         }
       }
     }
+    }
 
-    // --- 2. SUSCRIPCIONES Y COBROS RECURRENTES ---
-    for (int i = 0; i < provider.subscriptions.length; i++) {
+    // --- 2. SUSCRIPCIONES Y COBROS RECURRENTES (solo si el módulo está activo) ---
+    if (provider.isModuleActive(AppModuleId.subscriptions)) {
+      for (int i = 0; i < provider.subscriptions.length; i++) {
       final sub = provider.subscriptions[i];
       if (sub.isActive && !sub.paidThisMonth) {
         // Calcular fecha en el mes actual o siguiente
@@ -308,10 +312,12 @@ class LocalNotificationService {
           count++;
         }
       }
+      }
     }
 
-    // --- 3. TARJETAS DE CRÉDITO (CORTE Y PAGO) ---
-    for (int i = 0; i < provider.creditCards.length; i++) {
+    // --- 3. TARJETAS DE CRÉDITO (CORTE Y PAGO) (solo si el módulo está activo) ---
+    if (provider.isModuleActive(AppModuleId.creditCards)) {
+      for (int i = 0; i < provider.creditCards.length; i++) {
       final card = provider.creditCards[i];
       if (card.nextBillingAmount > 0 || card.usedAmount > 0) {
         // Alerta de día de corte
@@ -348,10 +354,12 @@ class LocalNotificationService {
           count++;
         }
       }
+      }
     }
 
-    // --- 4. CUENTAS POR COBRAR (ME DEBEN) ---
-    for (int i = 0; i < provider.receivables.length; i++) {
+    // --- 4. CUENTAS POR COBRAR (ME DEBEN) (solo si el módulo está activo) ---
+    if (provider.isModuleActive(AppModuleId.receivables)) {
+      for (int i = 0; i < provider.receivables.length; i++) {
       final rec = provider.receivables[i];
       if (!rec.isSettled && rec.dueDate != null) {
         final due = rec.dueDate!;
@@ -367,6 +375,7 @@ class LocalNotificationService {
           );
           count++;
         }
+      }
       }
     }
 

@@ -41,6 +41,12 @@ class PlansHubView extends StatelessWidget {
     final partnerShare = provider.partnerSharedShareMonth;
     final myShare = provider.mySharedShareMonth;
 
+    // Módulos visibles en este hub (Fase 3: todo lo desactivado se oculta)
+    final savingsActive = provider.isModuleActive(AppModuleId.savingsGoals);
+    final sharedActive = provider.isModuleActive(AppModuleId.sharedExpenses);
+    final subsActive = provider.isModuleActive(AppModuleId.subscriptions);
+    final anyPlanModuleActive = savingsActive || sharedActive || subsActive;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metas y Planes'),
@@ -62,15 +68,17 @@ class PlansHubView extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 32 : 16,
-          vertical: 16,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // TARJETA HERO: PATRIMONIO Y PROYECCIÓN FUTURA
+      body: !anyPlanModuleActive
+          ? _buildAllInactiveState(context, theme)
+          : SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 32 : 16,
+                vertical: 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // TARJETA HERO: PATRIMONIO Y PROYECCIÓN FUTURA
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -125,51 +133,71 @@ class PlansHubView extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${goals.length} Meta(s) en curso',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                      if (savingsActive)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${goals.length} Meta(s) en curso',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    provider.maskedCurrency(totalSaved),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
+                  if (savingsActive) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      provider.maskedCurrency(totalSaved),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    totalTarget > 0
-                        ? 'Total ahorrado de ${provider.maskedCurrency(totalTarget)} meta global (${(overallSavingsProgress * 100).toInt()}%)'
-                        : 'Ahorro acumulado en tus fondos personales',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      totalTarget > 0
+                          ? 'Total ahorrado de ${provider.maskedCurrency(totalTarget)} meta global (${(overallSavingsProgress * 100).toInt()}%)'
+                          : 'Ahorro acumulado en tus fondos personales',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ] else if (subsActive) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      provider.maskedCurrency(totalSubsMonthly),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Gasto fijo mensual en suscripciones y pagos fijos',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 12,
                     runSpacing: 6,
                     children: [
-                      _buildHeroChip(
-                        'Gastos Fijos: ${provider.maskedCurrency(totalSubsMonthly)}/mes',
-                        Icons.autorenew,
-                      ),
-                      if (cfg.isEnabled)
+                      if (subsActive)
+                        _buildHeroChip(
+                          'Gastos Fijos: ${provider.maskedCurrency(totalSubsMonthly)}/mes',
+                          Icons.autorenew,
+                        ),
+                      if (sharedActive && cfg.isEnabled)
                         _buildHeroChip(
                           'Hogar con ${cfg.partnerName}: ${provider.maskedCurrency(totalShared)}',
                           Icons.favorite,
@@ -181,56 +209,58 @@ class PlansHubView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // SECCIÓN 1: METAS DE AHORRO
-            _buildSectionHeader(
-              title: 'Metas de Ahorro y Fondos',
-              icon: Icons.savings,
-              color: Colors.purple,
-              count: goals.length,
-              onManage: () => onOpenModule?.call(AppModuleId.savingsGoals),
-            ),
-            const SizedBox(height: 10),
-            if (!provider.isModuleActive(AppModuleId.savingsGoals))
-              _buildInactiveNotice(AppModuleId.savingsGoals, 'Metas de Ahorro')
-            else if (goals.isEmpty)
-              _buildEmptyNotice('Aún no tienes metas de ahorro registradas.')
-            else
-              ...goals.map((g) => _buildSavingsGoalCard(context, provider, g, theme)),
-            const SizedBox(height: 24),
+            // SECCIÓN 1: METAS DE AHORRO (solo si el módulo está activo)
+            if (savingsActive) ...[
+              _buildSectionHeader(
+                title: 'Metas de Ahorro y Fondos',
+                icon: Icons.savings,
+                color: Colors.purple,
+                count: goals.length,
+                onManage: () => onOpenModule?.call(AppModuleId.savingsGoals),
+              ),
+              const SizedBox(height: 10),
+              if (goals.isEmpty)
+                _buildEmptyNotice('Aún no tienes metas de ahorro registradas.')
+              else
+                ...goals.map((g) =>
+                    _buildSavingsGoalCard(context, provider, g, theme)),
+              const SizedBox(height: 24),
+            ],
 
-            // SECCIÓN 2: GASTOS COMPARTIDOS (PAREJA / HOGAR)
-            _buildSectionHeader(
-              title: 'Finanzas en Pareja / Hogar',
-              icon: Icons.favorite,
-              color: Colors.pink,
-              count: cfg.isEnabled ? 1 : 0,
-              onManage: () => onOpenModule?.call(AppModuleId.sharedExpenses),
-            ),
-            const SizedBox(height: 10),
-            if (!provider.isModuleActive(AppModuleId.sharedExpenses) || !cfg.isEnabled)
-              _buildInactiveNotice(
-                  AppModuleId.sharedExpenses, 'Gastos Compartidos')
-            else
-              _buildSharedExpensesCard(
-                  context, provider, cfg, totalShared, myShare, partnerShare, theme),
-            const SizedBox(height: 24),
+            // SECCIÓN 2: GASTOS COMPARTIDOS (PAREJA / HOGAR) (solo si el módulo está activo)
+            if (sharedActive) ...[
+              _buildSectionHeader(
+                title: 'Finanzas en Pareja / Hogar',
+                icon: Icons.favorite,
+                color: Colors.pink,
+                count: cfg.isEnabled ? 1 : 0,
+                onManage: () => onOpenModule?.call(AppModuleId.sharedExpenses),
+              ),
+              const SizedBox(height: 10),
+              if (!cfg.isEnabled)
+                _buildSharedSetupNotice(theme)
+              else
+                _buildSharedExpensesCard(context, provider, cfg, totalShared,
+                    myShare, partnerShare, theme),
+              const SizedBox(height: 24),
+            ],
 
-            // SECCIÓN 3: SUSCRIPCIONES Y SERVICIOS FIJOS
-            _buildSectionHeader(
-              title: 'Suscripciones y Pagos Fijos',
-              icon: Icons.autorenew,
-              color: Colors.teal,
-              count: activeSubs.length,
-              onManage: () => onOpenModule?.call(AppModuleId.subscriptions),
-            ),
-            const SizedBox(height: 10),
-            if (!provider.isModuleActive(AppModuleId.subscriptions))
-              _buildInactiveNotice(AppModuleId.subscriptions, 'Suscripciones')
-            else if (activeSubs.isEmpty)
-              _buildEmptyNotice('No tienes suscripciones registradas.')
-            else
-              _buildSubscriptionsCard(
-                  context, provider, activeSubs, totalSubsMonthly, theme),
+            // SECCIÓN 3: SUSCRIPCIONES Y SERVICIOS FIJOS (solo si el módulo está activo)
+            if (subsActive) ...[
+              _buildSectionHeader(
+                title: 'Suscripciones y Pagos Fijos',
+                icon: Icons.autorenew,
+                color: Colors.teal,
+                count: activeSubs.length,
+                onManage: () => onOpenModule?.call(AppModuleId.subscriptions),
+              ),
+              const SizedBox(height: 10),
+              if (activeSubs.isEmpty)
+                _buildEmptyNotice('No tienes suscripciones registradas.')
+              else
+                _buildSubscriptionsCard(context, provider, activeSubs,
+                    totalSubsMonthly, theme),
+            ],
           ],
         ),
       ),
@@ -676,29 +706,79 @@ class PlansHubView extends StatelessWidget {
     );
   }
 
-  Widget _buildInactiveNotice(String moduleId, String moduleName) {
+  Widget _buildSharedSetupNotice(ThemeData theme) {
     return Card(
       elevation: 0,
-      color: Colors.grey.withValues(alpha: 0.1),
+      color: Colors.pink.withValues(alpha: 0.06),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            const Icon(Icons.info_outline, size: 20, color: Colors.grey),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'El módulo $moduleName está inactivo.',
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
+            const Icon(Icons.favorite_border, size: 22, color: Colors.pink),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Finanzas en pareja no configuradas',
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Activa la cuenta compartida con tu hogar en Ajustes para ver la división de gastos aquí.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
             ),
             TextButton(
-              onPressed: () => onOpenModule?.call('modules_hub'),
-              child: const Text('Activar en Catálogo'),
+              onPressed: () => onOpenModule?.call('settings'),
+              child: const Text('Configurar'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Estado vacío para cuando toda la categoría está desactivada.
+  Widget _buildAllInactiveState(BuildContext context, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.power_settings_new_rounded,
+            size: 48,
+            color: isDark ? Colors.white38 : Colors.black26,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Sin módulos activos',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Activa los módulos de Metas y Planes desde el Catálogo de Módulos para verlos aquí.',
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: () => onOpenModule?.call('modules_hub'),
+            icon: const Icon(Icons.widgets_outlined, size: 18),
+            label: const Text('Abrir Catálogo de Módulos'),
+          ),
+        ],
       ),
     );
   }

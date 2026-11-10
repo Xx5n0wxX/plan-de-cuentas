@@ -7,10 +7,8 @@ import '../providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/app_update_service.dart';
 import '../services/local_notification_service.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_update_dialog.dart';
 import '../widgets/ota_restart_dialog.dart';
-import '../widgets/quick_action_bottom_sheet.dart';
 import 'dashboard_view.dart';
 import 'debts_hub_view.dart';
 import 'erika_view.dart';
@@ -183,6 +181,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _selectedRoute = 'dashboard';
     }
 
+    // GATE FOR MODULE ROUTES (Fase 3): cualquier módulo que no esté activo
+    // se redirige al Dashboard antes de pintar. ModulesHub/DebtsHub/PlansHub
+    // y Settings quedan siempre accesibles.
+    if (AppModuleMeta.catalog.any((m) => m.id == _selectedRoute) &&
+        !provider.isModuleActive(_selectedRoute)) {
+      _selectedRoute = 'dashboard';
+    }
+
     if (isDesktop) {
       final selectedIdx = desktopRoutes.indexOf(_selectedRoute);
       return Scaffold(
@@ -295,16 +301,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       body: _buildScreenForRoute(_selectedRoute),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => QuickActionBottomSheet.show(
-          context,
-          onNavigate: _navigateToRoute,
-        ),
-        backgroundColor: AppTheme.primaryTeal,
-        foregroundColor: Colors.white,
-        tooltip: 'Acciones Rápidas (+)',
-        child: const Icon(Icons.add, size: 28),
-      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: mobileIndex,
         onDestinationSelected: (idx) =>

@@ -514,8 +514,8 @@ class _SettingsViewState extends State<SettingsView> {
             _buildAppearanceCard(context, provider),
             const SizedBox(height: 26),
 
-            // 5. SECCIÓN: CONFIGURACIÓN DE PAREJA
-            if (provider.isModuleActive(AppModuleId.sharedExpenses) || _sharedEnabled) ...[
+            // 5. SECCIÓN: CONFIGURACIÓN DE PAREJA (visible solo si el módulo está activo)
+            if (provider.isModuleActive(AppModuleId.sharedExpenses)) ...[
               _buildSettingsGroupHeader(
                 title: 'Finanzas en Pareja (Gastos Compartidos)',
                 icon: Icons.favorite,

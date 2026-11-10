@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/modular_models.dart';
 import '../models/transaction_model.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
@@ -189,34 +190,77 @@ class DashboardView extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 600;
+                final compromisoModules = [
+                  AppModuleId.loans,
+                  AppModuleId.openAccounts,
+                  AppModuleId.creditCards,
+                  AppModuleId.receivables,
+                ];
+                final anyCompromiso =
+                    compromisoModules.any(provider.isModuleActive);
+                final planModules = [
+                  AppModuleId.savingsGoals,
+                  AppModuleId.sharedExpenses,
+                  AppModuleId.subscriptions,
+                ];
+                final anyPlan = planModules.any(provider.isModuleActive);
+
+                String compromisoBadge;
+                if (provider.isModuleActive(AppModuleId.loans)) {
+                  compromisoBadge =
+                      '${provider.erikaLoans.where((l) => !l.isCompleted).length} Préstamo(s)';
+                } else if (provider.isModuleActive(AppModuleId.openAccounts)) {
+                  compromisoBadge =
+                      '${provider.openAccountNames.length} Libreta(s)';
+                } else if (provider.isModuleActive(AppModuleId.creditCards)) {
+                  compromisoBadge =
+                      '${provider.creditCards.length} Tarjeta(s)';
+                } else {
+                  compromisoBadge =
+                      '${provider.receivables.where((r) => !r.isSettled).length} por cobrar';
+                }
+
+                String planBadge;
+                if (provider.isModuleActive(AppModuleId.savingsGoals)) {
+                  planBadge = '${provider.savingsGoals.length} Meta(s)';
+                } else if (provider
+                    .isModuleActive(AppModuleId.subscriptions)) {
+                  planBadge =
+                      '${provider.subscriptions.where((s) => s.isActive).length} Suscripción(es)';
+                } else {
+                  planBadge = 'Pareja activa';
+                }
+
                 return Wrap(
                   spacing: 16,
                   runSpacing: 12,
                   children: [
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
-                      child: _buildHubNavigationCard(
-                        title: 'Compromisos y Deudas',
-                        subtitle:
-                            'Préstamos bancarios, libretas de fiado, tarjetas y cuentas por cobrar.',
-                        icon: Icons.account_balance_outlined,
-                        color: Colors.indigo,
-                        badge: '${provider.erikaLoans.where((l) => !l.isCompleted).length} Préstamo(s)',
-                        onTap: () => onNavigateToModule?.call('debts_hub'),
+                    if (anyCompromiso)
+                      SizedBox(
+                        width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
+                        child: _buildHubNavigationCard(
+                          title: 'Compromisos y Deudas',
+                          subtitle:
+                              'Préstamos bancarios, libretas de fiado, tarjetas y cuentas por cobrar.',
+                          icon: Icons.account_balance_outlined,
+                          color: Colors.indigo,
+                          badge: compromisoBadge,
+                          onTap: () => onNavigateToModule?.call('debts_hub'),
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
-                      child: _buildHubNavigationCard(
-                        title: 'Metas, Planes y Pareja',
-                        subtitle:
-                            'Metas de ahorro, división de gastos del hogar y calendario de suscripciones.',
-                        icon: Icons.savings_outlined,
-                        color: Colors.purple,
-                        badge: '${provider.savingsGoals.length} Meta(s)',
-                        onTap: () => onNavigateToModule?.call('plans_hub'),
+                    if (anyPlan)
+                      SizedBox(
+                        width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
+                        child: _buildHubNavigationCard(
+                          title: 'Metas, Planes y Pareja',
+                          subtitle:
+                              'Metas de ahorro, división de gastos del hogar y calendario de suscripciones.',
+                          icon: Icons.savings_outlined,
+                          color: Colors.purple,
+                          badge: planBadge,
+                          onTap: () => onNavigateToModule?.call('plans_hub'),
+                        ),
                       ),
-                    ),
                     SizedBox(
                       width: isWide ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth,
                       child: _buildHubNavigationCard(
@@ -854,8 +898,9 @@ class DashboardView extends StatelessWidget {
     final nextWeek = today.add(const Duration(days: 7));
     final List<_UpcomingItem> items = [];
 
-    // 1. Préstamos bancarios
-    for (final loan in provider.erikaLoans) {
+    // 1. Préstamos bancarios (solo si el módulo está activo)
+    if (provider.isModuleActive(AppModuleId.loans)) {
+      for (final loan in provider.erikaLoans) {
       if (!loan.isCompleted && loan.nextDueDate != null) {
         final due = DateTime(
           loan.nextDueDate!.year,
@@ -876,10 +921,12 @@ class DashboardView extends StatelessWidget {
           ));
         }
       }
+      }
     }
 
-    // 2. Suscripciones
-    for (final sub in provider.subscriptions) {
+    // 2. Suscripciones (solo si el módulo está activo)
+    if (provider.isModuleActive(AppModuleId.subscriptions)) {
+      for (final sub in provider.subscriptions) {
       if (sub.isActive) {
         // Calcular fecha de corte este mes
         DateTime subDue = DateTime(today.year, today.month, sub.billingDay.clamp(1, 28));
@@ -900,10 +947,12 @@ class DashboardView extends StatelessWidget {
           ));
         }
       }
+      }
     }
 
     // 3. Tarjetas de crédito (fecha de vencimiento de pago)
-    for (final card in provider.creditCards) {
+    if (provider.isModuleActive(AppModuleId.creditCards)) {
+      for (final card in provider.creditCards) {
       if (card.usedAmount > 0) {
         DateTime cardDue = DateTime(today.year, today.month, card.dueDay.clamp(1, 28));
         if (cardDue.isBefore(today)) {
@@ -922,6 +971,7 @@ class DashboardView extends StatelessWidget {
             onAction: () => onNavigateToModule?.call('debts_hub'),
           ));
         }
+      }
       }
     }
 
