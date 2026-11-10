@@ -7,7 +7,7 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <!-- Fila superior: Logo + Nombre + Badge de Mes / Estado -->
+    <!-- Fila superior: Logo + Nombre + Badge de Mes -->
     <LinearLayout
         android:id="@+id/widget_header"
         android:layout_width="match_parent"
@@ -16,14 +16,15 @@
         android:orientation="horizontal">
 
         <ImageView
+            android:id="@+id/widget_app_icon"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:contentDescription="@string/quick_add_title"
-            android:src="@mipmap/ic_launcher" />
+            android:src="@drawable/ic_widget_logo" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:text="Plan de Cuentas"
@@ -36,21 +37,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/badge_bg"
-            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
             android:paddingTop="3dp"
-            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
             android:paddingBottom="3dp"
             android:text="Resumen"
             android:textColor="#94A3B8"
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Contenedor Central: Balance + Métricas (tocar abre la app) -->
+    <!-- Contenedor Central: Balance + Métricas (al tocar abre la app) -->
     <LinearLayout
         android:id="@+id/widget_balance_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="vertical">
@@ -103,7 +104,7 @@
                 android:id="@+id/widget_shopping_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🛒 0 items"
+                android:text="🛒 0 ítems"
                 android:textColor="#FDB022"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -113,85 +114,61 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="36dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
-        <LinearLayout
+        <TextView
             android:id="@+id/btn_quick_expense"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginEnd="4dp"
+            android:layout_marginRight="3dp"
             android:layout_weight="1"
             android:background="@drawable/btn_expense_bg"
             android:gravity="center"
-            android:orientation="horizontal">
+            android:text="- Gasto"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="- Gasto"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
+        <TextView
             android:id="@+id/btn_quick_income"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginRight="3dp"
             android:layout_weight="1"
             android:background="@drawable/btn_income_bg"
             android:gravity="center"
-            android:orientation="horizontal">
+            android:text="+ Ingreso"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="+ Ingreso"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
+        <TextView
             android:id="@+id/btn_quick_shopping"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginRight="3dp"
             android:layout_weight="1"
             android:background="@drawable/btn_action_bg"
             android:gravity="center"
-            android:orientation="horizontal">
+            android:text="🛒 Lista"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🛒 Lista"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
+        <TextView
             android:id="@+id/btn_quick_fiado"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="2dp"
+            android:layout_marginLeft="2dp"
             android:layout_weight="1"
             android:background="@drawable/btn_action_bg"
             android:gravity="center"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📋 Fiado"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
+            android:text="📋 Fiado"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>

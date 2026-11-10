@@ -12,4 +12,4 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:previewLayout="@layout/quick_add_widget"
-    android:previewImage="@mipmap/ic_launcher" />
+    android:previewImage="@drawable/ic_widget_logo" />

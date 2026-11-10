@@ -1,8 +1,8 @@
 {
-  "version": "2.7.4",
-  "buildNumber": 265,
+  "version": "2.7.5",
+  "buildNumber": 266,
   "forceUpdate": false,
-  "changelog": "Widget rectangular interactivo 4x2 con resumen financiero mensual (balance, ingresos, gastos, compras) y botones de acción rápida directos",
+  "changelog": "Corrección de renderizado RemoteViews en Android: stroke entero 1dp, raster icons en drawable e inflador plano a prueba de launchers",
   "apkUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Android.apk",
   "windowsExeUrl": "https://github.com/Xx5n0wxX/plan-de-cuentas/releases/latest/download/PlanDeCuentas_Setup.exe"
 }
