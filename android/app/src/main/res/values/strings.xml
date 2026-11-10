@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quick_add_title">Ingreso rápido</string>
+    <string name="quick_add_desc">Acceso directo para registrar en Plan de Cuentas sin entrar a la app</string>
+</resources>

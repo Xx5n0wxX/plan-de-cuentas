@@ -13,6 +13,7 @@ import '../models/transaction_model.dart';
 import '../services/firebase_sync_service.dart';
 import '../services/google_drive_backup_service.dart';
 import '../services/google_sheets_export_service.dart';
+import '../services/quick_add_inbox_service.dart';
 import '../utils/currency_formatter.dart';
 
 class FinanceProvider extends ChangeNotifier {
@@ -2137,6 +2138,90 @@ class FinanceProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+    // ---- QuickAdd nativo: consume pendientes + snapshot de metadatos ----
+    await _consumePendingQuickAdd();
+    await _writeQuickAddMetaSnapshot();
+  }
+
+  // ---------------------------------------------------------------------------
+  // QuickAdd nativo
+  // ---------------------------------------------------------------------------
+
+  /// Lee y aplica las entradas pendientes escritas por el overlay nativo.
+  /// Un flujo multi-entry es welcomed; el archivo se borra tras aplicar.
+  Future<void> _consumePendingQuickAdd() async {
+    final pending = await QuickAddInboxService.readPending();
+    if (pending.isEmpty) return;
+
+    for (final entry in pending) {
+      try {
+        switch (entry.action) {
+          case 'add_shopping_item':
+            final name = entry.title.trim();
+            if (name.isEmpty) continue;
+            await addShoppingItem(name: name, estimatedPrice: 0);
+          case 'add_fiado':
+            await addFiadoEntry(
+              entry.amount,
+              note: entry.note,
+              accountName: entry.accountName.isEmpty ? null : entry.accountName,
+            );
+          case 'add_transaction':
+            final type = entry.type == 'income'
+                ? TransactionType.income
+                : TransactionType.expense;
+            await addTransaction(
+              title: entry.title,
+              amount: entry.amount,
+              type: type,
+              category: entry.category,
+              note: entry.note,
+            );
+          case 'add_credit_card_payment':
+            if (entry.cardId.isNotEmpty) {
+              await payCreditCardStatement(entry.cardId, entry.amount);
+            }
+          case 'add_savings_deposit':
+            if (entry.goalId.isNotEmpty) {
+              await depositToSavingsGoal(entry.goalId, entry.amount);
+            }
+          case 'add_ant_expense':
+            final categoryId = entry.categoryId.isEmpty
+                ? 'widget-default'
+                : entry.categoryId;
+            final categoryName = entry.categoryName.isEmpty
+                ? 'Otros'
+                : entry.categoryName;
+            final title = entry.title.trim();
+            await addAntExpense(
+              categoryId: categoryId,
+              categoryName: categoryName,
+              title: title,
+              amount: entry.amount,
+            );
+          default:
+            debugPrint('QuickAdd ignorado: ${entry.action}');
+        }
+      } catch (e) {
+        debugPrint('QuickAdd pendiente no se pudo procesar (${entry.action}): $e');
+      }
+    }
+
+    await QuickAddInboxService.clearPending();
+  }
+
+  /// Escribe el snapshot de metadatos usado por el overlay nativo para los
+  /// selectores de tarjetas, metas y categorías de gasto hormiga. Se ejecuta
+  /// después de que todos los datos locales han cargado.
+  Future<void> _writeQuickAddMetaSnapshot() async {
+    await QuickAddInboxService.writeMeta({
+      'cards': _creditCards.map((c) => {'id': c.id, 'name': c.name}).toList(),
+      'goals': _savingsGoals.map((g) => {'id': g.id, 'name': g.name}).toList(),
+      'antCategories': _budgetCategories.map((c) => {
+            'id': c.id,
+            'name': c.name,
+          }).toList(),
+    });
   }
 
   /// Deja la aplicación completamente en 0 (sin datos)
